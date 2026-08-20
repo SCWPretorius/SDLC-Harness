@@ -36,6 +36,8 @@ Model fields use **slug IDs** (see [docs/MODEL-IDS.md](docs/MODEL-IDS.md)).
 
 Availability depends on your Copilot plan. Fallbacks are listed in each agent file.
 
+**Economy (lower credits):** use `sdlc-orchestrator-economy` and other `*-economy` agents — see [docs/ECONOMY.md](docs/ECONOMY.md). Standard agents above are unchanged.
+
 ## Layout
 
 ```
@@ -61,6 +63,7 @@ templates/          # PRD, analysis, review, workspace
 
 ## Docs
 
+- [ECONOMY.md](docs/ECONOMY.md) — credit-saving `*-economy` agents
 - [MODEL-IDS.md](docs/MODEL-IDS.md) — Copilot model slug IDs for agent frontmatter
 - [SETUP.md](docs/SETUP.md) — install CodeGraph, az, workspace
 - [WORKFLOW.md](docs/WORKFLOW.md) — end-to-end SDLC phases

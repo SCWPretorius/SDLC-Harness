@@ -20,8 +20,9 @@ Example: `Claude Haiku 4.5` → `claude-haiku-4.5`
 | Claude Fable 5 | `claude-fable-5` |
 | Gemini 3.1 Pro | `gemini-3.1-pro-preview` |
 | MAI-Code-1-Flash | `mai-code-1-flash` |
+| MAI-Code-1.1-Flash | `mai-code-1.1-flash` |
 
-## Agent assignments
+## Agent assignments (standard)
 
 | Agent | Primary | Fallbacks |
 |-------|---------|-----------|
@@ -32,6 +33,22 @@ Example: `Claude Haiku 4.5` → `claude-haiku-4.5`
 | `ado-ops` | `gpt-5.6-luna` | `claude-haiku-4.5`, `mai-code-1-flash` |
 | `implementer` | `gpt-5.3-codex` | `claude-sonnet-5`, `claude-fable-5` |
 | `code-reviewer` | `gpt-5.6-sol` | `claude-opus-4.8`, `gemini-3.1-pro-preview` |
+
+## Agent assignments (economy)
+
+See [ECONOMY.md](ECONOMY.md). Separate `*-economy` agents; standard agents unchanged.
+
+| Agent | Primary | Fallbacks |
+|-------|---------|-----------|
+| `sdlc-orchestrator-economy` | `gpt-5.6-luna` | `mai-code-1.1-flash` |
+| `analyst-economy` | `gpt-5.6-terra` | `claude-sonnet-5` |
+| `tech-pm-economy` | `claude-sonnet-5` | `gpt-5.6-terra` |
+| `ado-planner-economy` | `gpt-5.6-terra` | `claude-sonnet-5` |
+| `ado-ops-economy` | `gpt-5.6-luna` | `mai-code-1.1-flash`, `claude-haiku-4.5` |
+| `implementer-economy` | `gpt-5.3-codex` | `claude-sonnet-5` |
+| `code-reviewer-economy` | `claude-sonnet-5` | `gpt-5.6-terra` |
+
+Also mapped: `mai-code-1.1-flash` ← MAI-Code-1.1-Flash
 
 ## Notes
 
