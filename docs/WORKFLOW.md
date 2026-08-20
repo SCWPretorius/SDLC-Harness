@@ -36,7 +36,8 @@ Human confirms before backlog.
 
 Agent: `ado-planner`  
 **Must ask Epic first.**  
-Map slices → Features → Stories → Tasks via `az` / `scripts/ado/create-hierarchy.sh`.
+If no work items exist for the request, **creating them is mandatory** (Epic if needed → Features → Stories → Tasks via `az` / `scripts/ado/create-hierarchy.sh`).  
+Do not proceed to branch/implement without real ADO IDs.
 
 ### 4. Activate + branch
 
@@ -57,4 +58,8 @@ Write full findings first, then create Bugs/Tasks, then fix with implementer usi
 
 - Epic selection before any Feature/Story/Task create
 - PRD confirmation before backlog (recommended)
-- Handoff buttons use `send: false` so a human starts each phase
+- Handoff buttons on the orchestrator use `send: false` so a human can start each phase
+
+## Orchestrator behavior
+
+`sdlc-orchestrator` is **router-only**: tools limited to the `agent` tool + fixed `agents:` list. It must invoke specialists (`analyst`, `tech-pm`, `ado-planner`, `ado-ops`, `implementer`, `code-reviewer`) and must not do their work. If it tries to analyze/code/create ADO items itself, stop it and pick the specialist (or re-run orchestrator with “invoke analyst now”).

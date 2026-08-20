@@ -49,9 +49,9 @@ templates/          # PRD, analysis, review, workspace
 
 ## Hard rules (all agents)
 
-1. Chat uses **caveman** compression; persisted artifacts (PRD, tickets, commits, review docs) use normal English.
+1. Chat uses **caveman full** always (forced via always-on instructions + skill + every agent). Do not wait for `/caveman`. Persisted artifacts (PRD, tickets, commits, review docs) use normal English.
 2. Prefer **CodeGraph** before blind grep/search.
-3. Never create Features / User Stories / Tasks without a confirmed **Epic**.
+3. Never create Features / User Stories / Tasks without a confirmed **Epic**. If no work items exist, **create** them before branch/code.
 4. Branching: `main` → `feature/<slug>` → `feature/<slug>/<id>-name` → PR → feature branch.
 5. Implementation follows **vertical feature slices** and clean C# practices.
 6. After implementation: review → document findings → create ADO items → fix with the same implementer loop.

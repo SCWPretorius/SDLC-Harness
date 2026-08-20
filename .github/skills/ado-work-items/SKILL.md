@@ -24,7 +24,17 @@ Before creating Feature, User Story, or Task:
 
 1. Ask: "Which Epic should these items live under? Provide Epic ID, or say create a new Epic."
 2. Wait for answer.
-3. Only then create children.
+3. If create-new: create the Epic with `az boards work-item create --type Epic ...` first.
+4. Only then create children.
+
+## Mandatory create when missing
+
+If the user wants to build / branch / track work and **no** Feature / User Story / Task IDs exist:
+
+- Creating the hierarchy is **required**
+- Do not stop at proposing titles in chat
+- Run `az` or `./scripts/ado/create-hierarchy.sh` and return real IDs
+- `implementer` / `ado-ops` must wait for those IDs
 
 ## Hierarchy
 
