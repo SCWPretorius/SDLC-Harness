@@ -19,7 +19,7 @@ npx sdlc-copilot-harness
 The installer asks for:
 
 1. **Parent folder** — directory that holds sibling product repos  
-2. **Harness folder name** — default `Agents` (created/copied if missing)  
+2. **Harness folder name** — default `SDLC Harness` (created/copied if missing)  
 3. **Which sibling folders** to put in the multi-root workspace  
 4. **Workspace file name** — default `sdlc.code-workspace` (written into the parent)  
 5. Optional **~/.copilot** personal install (symlink or copy)
@@ -31,8 +31,8 @@ Non-interactive example:
 ```bash
 npx sdlc-copilot-harness --yes \
   --parent ~/dev \
-  --agents-name Agents \
-  --folders Agents,Contoso.Api,Fabrikam.Web \
+  --agents-name "SDLC Harness" \
+  --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
   --workspace sdlc.code-workspace \
   --personal --personal-mode symlink
 ```
@@ -42,7 +42,7 @@ Until published to npm, run from this repo:
 ```bash
 node bin/install.mjs
 # or
-npx --yes /path/to/Agents
+npx --yes "/path/to/SDLC Harness"
 ```
 
 ### Manual setup

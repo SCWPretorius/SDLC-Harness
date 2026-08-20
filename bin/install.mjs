@@ -4,16 +4,16 @@
  *
  * Interactive installer:
  * - asks for parent folder that holds sibling product repos
- * - copies/updates the Agents harness into that folder
+ * - copies/updates the SDLC Harness into that folder
  * - detects sibling directories and builds sdlc.code-workspace
  * - optionally links agents/skills into ~/.copilot
  *
  * Non-interactive:
  *   npx sdlc-copilot-harness --yes \
  *     --parent ~/dev \
- *     --agents-name Agents \
+ *     --agents-name "SDLC Harness" \
  *     --workspace sdlc.code-workspace \
- *     --folders Agents,Contoso.Api,Fabrikam.Web \
+ *     --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
  *     --personal --personal-mode symlink
  */
 import fs from "node:fs";
@@ -102,7 +102,7 @@ function printHelp() {
 
 Options:
   --parent <dir>           Parent folder containing sibling repos
-  --agents-name <name>     Harness folder name (default: Agents)
+  --agents-name <name>     Harness folder name (default: SDLC Harness)
   --workspace <file>       Workspace filename (default: sdlc.code-workspace)
   --folders <a,b,c>        Folders to include (comma-separated)
   --personal / --no-personal
@@ -306,7 +306,7 @@ async function runInteractive(args) {
 
   const agentsFolderName = await p.text({
     message: "Harness folder name (will be created/updated here)",
-    initialValue: args.agentsName || "Agents",
+    initialValue: args.agentsName || "SDLC Harness",
     validate(v) {
       if (!v?.trim()) return "Required";
       if (/[\\/]/.test(v)) return "Name only, not a path";
@@ -399,7 +399,7 @@ function runNonInteractive(args) {
   if (!isDirectory(parentDir)) {
     throw new Error(`Not a directory: ${parentDir}`);
   }
-  const agentsName = (args.agentsName || "Agents").trim();
+  const agentsName = (args.agentsName || "SDLC Harness").trim();
   const siblings = listSiblingFolders(parentDir);
   const selectedFolders = Array.from(
     new Set([

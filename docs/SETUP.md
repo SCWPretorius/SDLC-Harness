@@ -19,7 +19,7 @@ Prompts for parent folder, harness name, sibling folders, workspace filename, an
 Until the package is on npm:
 
 ```bash
-cd /path/to/Agents
+cd "/path/to/SDLC Harness"
 npm install
 node bin/install.mjs
 ```
@@ -27,14 +27,14 @@ node bin/install.mjs
 Non-interactive:
 
 ```bash
-node bin/install.mjs --yes --parent ~/dev --folders Agents,Contoso.Api,Fabrikam.Web --no-personal
+node bin/install.mjs --yes --parent ~/dev --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" --no-personal
 ```
 
 Layout after install:
 
 ```text
 dev/
-  Agents/                 # harness (.github/agents, skills, …)
+  SDLC Harness/          # harness (.github/agents, skills, …)
   Contoso.Api/
   Fabrikam.Web/
   ...
@@ -91,8 +91,8 @@ Agents declare preferred models from [GitHub’s model comparison](https://docs.
 ## 7. Push harness to Azure DevOps
 
 ```bash
-az repos create --name Agents   # if needed
-git remote add origin https://dev.azure.com/<ORG>/<PROJECT>/_git/Agents
+az repos create --name SDLC-Harness   # if needed
+git remote add origin https://dev.azure.com/<ORG>/<PROJECT>/_git/SDLC-Harness
 git add -A && git commit -m "Initial SDLC Copilot harness"
 git push -u origin main
 ```
