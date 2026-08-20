@@ -4,6 +4,18 @@ Agent frontmatter `model:` must use **slug IDs**, not display names.
 
 Example: `Claude Haiku 4.5` → `claude-haiku-4.5`
 
+Prefer an **inline** list so `tools` / `handoffs` are not mistaken for more models:
+
+```yaml
+model: [gpt-5.6-terra, claude-sonnet-5]
+
+tools:
+  - agent
+
+handoffs:
+  - label: …
+```
+
 ## Mapping used in this harness
 
 | Display name | Slug |

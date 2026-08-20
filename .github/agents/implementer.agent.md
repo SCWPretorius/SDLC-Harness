@@ -1,12 +1,14 @@
 ---
 name: implementer
+
 description: Implements vertical feature slices in C# .NET 10 on work-item branches. Clean code, CodeGraph-aware, PR to feature branch.
+
 argument-hint: Work item ID + acceptance criteria or PRD slice…
-model:
-  - gpt-5.3-codex
-  - claude-sonnet-5
-  - claude-fable-5
+
+model: [gpt-5.3-codex, claude-sonnet-5, claude-fable-5]
+
 target: vscode
+
 tools:
   - search/codebase
   - search/usages
@@ -16,6 +18,7 @@ tools:
   - edit/createDirectory
   - edit/editFiles
   - read/terminalLastCommand
+
 handoffs:
   - label: Create backlog first
     agent: ado-planner

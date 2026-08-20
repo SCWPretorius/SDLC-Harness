@@ -1,11 +1,14 @@
 ---
 name: tech-pm-economy
+
 description: Technical project manager. Turns analysis into a concise PRD with vertical slices and acceptance criteria. ECONOMY profile — cheaper models.
+
 argument-hint: Point at the analysis report or paste findings…
-model:
-  - claude-sonnet-5
-  - gpt-5.6-terra
+
+model: [claude-sonnet-5, gpt-5.6-terra]
+
 target: vscode
+
 tools:
   - search/codebase
   - web/fetch
@@ -13,6 +16,7 @@ tools:
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles
+
 handoffs:
   - label: Create ADO backlog
     agent: ado-planner-economy

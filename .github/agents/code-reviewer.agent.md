@@ -1,12 +1,14 @@
 ---
 name: code-reviewer
+
 description: Reviews completed work, documents all bugs/snags, creates Azure DevOps bugs under the relevant parent, then hands back to implementer.
+
 argument-hint: PR URL or work item ID to review…
-model:
-  - gpt-5.6-sol
-  - claude-opus-4.8
-  - gemini-3.1-pro-preview
+
+model: [gpt-5.6-sol, claude-opus-4.8, gemini-3.1-pro-preview]
+
 target: vscode
+
 tools:
   - search/codebase
   - search/usages
@@ -15,6 +17,7 @@ tools:
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles
+
 handoffs:
   - label: File ADO bugs
     agent: ado-planner

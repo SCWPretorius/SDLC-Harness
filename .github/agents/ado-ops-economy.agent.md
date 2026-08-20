@@ -1,16 +1,19 @@
 ---
 name: ado-ops-economy
+
 description: Fast Azure DevOps operations agent. Moves work item states, creates branches, opens PRs to feature branches, and links AB# work items. ECONOMY profile — cheapest models.
+
 argument-hint: Work item ID + desired state or branch/PR action…
-model:
-  - gpt-5.6-luna
-  - mai-code-1.1-flash
-  - claude-haiku-4.5
+
+model: [gpt-5.6-luna, mai-code-1.1-flash, claude-haiku-4.5]
+
 target: vscode
+
 tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
   - edit/editFiles
+
 handoffs:
   - label: Create backlog first
     agent: ado-planner-economy

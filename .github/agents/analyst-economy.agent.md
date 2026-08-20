@@ -1,11 +1,14 @@
 ---
 name: analyst-economy
+
 description: Multi-repo technical analyst. Uses CodeGraph, writes concise analysis docs, does not edit product code. ECONOMY profile — cheaper models.
+
 argument-hint: What should be analyzed across the repos?
-model:
-  - gpt-5.6-terra
-  - claude-sonnet-5
+
+model: [gpt-5.6-terra, claude-sonnet-5]
+
 target: vscode
+
 tools:
   - search/codebase
   - search/usages
@@ -16,6 +19,7 @@ tools:
   - edit/createDirectory
   - edit/editFiles
   - read/terminalLastCommand
+
 handoffs:
   - label: Draft PRD
     agent: tech-pm-economy

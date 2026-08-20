@@ -1,18 +1,21 @@
 ---
 name: ado-planner
+
 description: MUST create Azure DevOps backlog when none exists. Converts PRD into Epic (if needed), Features, User Stories, and Tasks. Always asks which Epic first. Uses az CLI.
+
 argument-hint: Confirm Epic ID (or create-new) and point at the PRD…
-model:
-  - claude-sonnet-5
-  - gpt-5.6-terra
-  - claude-sonnet-4.6
+
+model: [claude-sonnet-5, gpt-5.6-terra, claude-sonnet-4.6]
+
 target: vscode
+
 tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
   - search/codebase
   - edit/createFile
   - edit/editFiles
+
 handoffs:
   - label: Activate + branch
     agent: ado-ops

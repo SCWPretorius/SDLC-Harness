@@ -1,11 +1,14 @@
 ---
 name: code-reviewer-economy
+
 description: Reviews completed work, documents all bugs/snags, creates Azure DevOps bugs under the relevant parent, then hands back to implementer. ECONOMY profile — cheaper models.
+
 argument-hint: PR URL or work item ID to review…
-model:
-  - claude-sonnet-5
-  - gpt-5.6-terra
+
+model: [claude-sonnet-5, gpt-5.6-terra]
+
 target: vscode
+
 tools:
   - search/codebase
   - search/usages
@@ -14,6 +17,7 @@ tools:
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles
+
 handoffs:
   - label: File ADO bugs
     agent: ado-planner-economy

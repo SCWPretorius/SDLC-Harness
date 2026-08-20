@@ -55,11 +55,15 @@ This repo lives as a **sibling** of product repos.
    - CodeGraph CLI wired for Copilot VS Code
    - `codegraph init` in **each** product repo
 3. Optional: `./scripts/install-copilot-harness.sh`
-4. In Copilot Chat, pick **sdlc-orchestrator** (or **sdlc-orchestrator-economy**) and describe the request.
+4. In Copilot Chat:
+   - **Quality:** `sdlc-orchestrator`
+   - **Economy (lower credits):** `sdlc-orchestrator-economy`
 
 ## Agents and models
 
-Model fields use **slug IDs** (see [docs/MODEL-IDS.md](docs/MODEL-IDS.md)).
+Two profiles ship side by side. Model fields use **slug IDs** (see [docs/MODEL-IDS.md](docs/MODEL-IDS.md)). Availability depends on your Copilot plan.
+
+### Standard (quality)
 
 | Agent | Role | Model (primary) |
 |-------|------|-----------------|
@@ -71,9 +75,33 @@ Model fields use **slug IDs** (see [docs/MODEL-IDS.md](docs/MODEL-IDS.md)).
 | `implementer` | Vertical-slice .NET 10 implementation | `gpt-5.3-codex` |
 | `code-reviewer` | Review + findings doc → ADO bugs | `gpt-5.6-sol` |
 
-Availability depends on your Copilot plan. Fallbacks are listed in each agent file.
+Fallbacks (including Sol/Opus/Fable where listed) are in each agent file.
 
-**Economy (lower credits):** use `sdlc-orchestrator-economy` and other `*-economy` agents — see [docs/ECONOMY.md](docs/ECONOMY.md). Standard agents above are unchanged.
+### Economy (lower credits)
+
+Same SDLC rules as standard — Epic gate, create backlog when missing, branching, caveman, CodeGraph — but cheaper models. Standard agents are **unchanged**.
+
+| Agent | Role | Model (primary) |
+|-------|------|-----------------|
+| `sdlc-orchestrator-economy` | Route phases | `gpt-5.6-luna` |
+| `analyst-economy` | Multi-repo analysis + docs | `gpt-5.6-terra` |
+| `tech-pm-economy` | Findings → PRD | `claude-sonnet-5` |
+| `ado-planner-economy` | PRD → Features / Stories / Tasks | `gpt-5.6-terra` |
+| `ado-ops-economy` | States / branches / PR links | `gpt-5.6-luna` |
+| `implementer-economy` | Vertical-slice implementation | `gpt-5.3-codex` |
+| `code-reviewer-economy` | Review + findings → ADO bugs | `claude-sonnet-5` |
+
+**How to use economy mode**
+
+1. Open the multi-root workspace.
+2. In Copilot Chat, pick **`sdlc-orchestrator-economy`** (not `sdlc-orchestrator`).
+3. Stay on `*-economy` handoffs for the whole flow — do not mix with standard Sol/Opus agents mid-run.
+
+Escalate to standard agents only when you need full-quality analysis or review (large multi-repo ambiguity, security-critical review).
+
+Economy defaults avoid: `gpt-5.6-sol`, `gpt-5.5`, `claude-opus-4.8`, `claude-fable-5`.
+
+Details: [docs/ECONOMY.md](docs/ECONOMY.md).
 
 ## Layout
 

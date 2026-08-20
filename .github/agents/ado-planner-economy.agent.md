@@ -1,17 +1,21 @@
 ---
 name: ado-planner-economy
+
 description: MUST create Azure DevOps backlog when none exists. Converts PRD into Epic (if needed), Features, User Stories, and Tasks. Always asks which Epic first. Uses az CLI. ECONOMY profile — cheaper models.
+
 argument-hint: Confirm Epic ID (or create-new) and point at the PRD…
-model:
-  - gpt-5.6-terra
-  - claude-sonnet-5
+
+model: [gpt-5.6-terra, claude-sonnet-5]
+
 target: vscode
+
 tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
   - search/codebase
   - edit/createFile
   - edit/editFiles
+
 handoffs:
   - label: Activate + branch
     agent: ado-ops-economy

@@ -1,12 +1,14 @@
 ---
 name: analyst
+
 description: Multi-repo technical analyst. Uses CodeGraph, writes concise analysis docs, does not edit product code.
+
 argument-hint: What should be analyzed across the repos?
-model:
-  - gpt-5.6-sol
-  - gpt-5.5
-  - claude-opus-4.8
+
+model: [gpt-5.6-sol, gpt-5.5, claude-opus-4.8]
+
 target: vscode
+
 tools:
   - search/codebase
   - search/usages
@@ -17,6 +19,7 @@ tools:
   - edit/createDirectory
   - edit/editFiles
   - read/terminalLastCommand
+
 handoffs:
   - label: Draft PRD
     agent: tech-pm

@@ -1,13 +1,17 @@
 ---
 name: sdlc-orchestrator-economy
+
 description: STRICT router only. Must invoke specialist subagents. When no ADO work items exist, must route to ado-planner to CREATE them before branch/implement. ECONOMY profile — cheaper models; same SDLC rules.
+
 argument-hint: Describe the initiative — orchestrator will route to specialists…
-model:
-  - gpt-5.6-luna
-  - mai-code-1.1-flash
+
+model: [gpt-5.6-luna, mai-code-1.1-flash]
+
 target: vscode
+
 tools:
   - agent
+
 agents:
   - analyst-economy
   - tech-pm-economy
@@ -15,6 +19,7 @@ agents:
   - ado-ops-economy
   - implementer-economy
   - code-reviewer-economy
+
 handoffs:
   - label: 1 · Analysis
     agent: analyst-economy

@@ -1,12 +1,14 @@
 ---
 name: tech-pm
+
 description: Technical project manager. Turns analysis into a concise PRD with vertical slices and acceptance criteria.
+
 argument-hint: Point at the analysis report or paste findings…
-model:
-  - claude-opus-4.8
-  - gpt-5.6-sol
-  - gpt-5.5
+
+model: [claude-opus-4.8, gpt-5.6-sol, gpt-5.5]
+
 target: vscode
+
 tools:
   - search/codebase
   - web/fetch
@@ -14,6 +16,7 @@ tools:
   - edit/createFile
   - edit/createDirectory
   - edit/editFiles
+
 handoffs:
   - label: Create ADO backlog
     agent: ado-planner
