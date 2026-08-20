@@ -1,0 +1,26 @@
+{
+  "folders": [
+    {
+      "name": "Agents",
+      "path": "./Agents"
+    },
+    {
+      "name": "Product-Alpha",
+      "path": "./Product-Alpha"
+    },
+    {
+      "name": "Product-Beta",
+      "path": "./Product-Beta"
+    },
+    {
+      "name": "Product-Gamma",
+      "path": "./Product-Gamma"
+    }
+  ],
+  "settings": {
+    "chat.agentFilesLocations": [
+      "${workspaceFolder:Agents}/.github/agents"
+    ],
+    "chat.useCustomizationsInParentRepositories": true
+  }
+}
