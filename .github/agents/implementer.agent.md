@@ -3,9 +3,9 @@ name: implementer
 description: Implements vertical feature slices in C# .NET 10 on work-item branches. Clean code, CodeGraph-aware, PR to feature branch.
 argument-hint: Work item ID + acceptance criteria or PRD slice…
 model:
-  - GPT-5.3-Codex
-  - Claude Sonnet 5
-  - Claude Fable 5
+  - gpt-5.3-codex
+  - claude-sonnet-5
+  - claude-fable-5
 target: vscode
 tools:
   - search/codebase

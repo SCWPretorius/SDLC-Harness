@@ -3,8 +3,8 @@ name: sdlc-orchestrator
 description: STRICT router only. Must invoke specialist subagents. When no ADO work items exist, must route to ado-planner to CREATE them before branch/implement.
 argument-hint: Describe the initiative — orchestrator will route to specialists…
 model:
-  - GPT-5.6 Terra
-  - Claude Sonnet 5
+  - gpt-5.6-terra
+  - claude-sonnet-5
 target: vscode
 tools:
   - agent

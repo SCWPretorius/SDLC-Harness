@@ -3,9 +3,9 @@ name: tech-pm
 description: Technical project manager. Turns analysis into a concise PRD with vertical slices and acceptance criteria.
 argument-hint: Point at the analysis report or paste findings…
 model:
-  - Claude Opus 4.8
-  - GPT-5.6 Sol
-  - GPT-5.5
+  - claude-opus-4.8
+  - gpt-5.6-sol
+  - gpt-5.5
 target: vscode
 tools:
   - search/codebase

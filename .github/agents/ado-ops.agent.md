@@ -3,9 +3,9 @@ name: ado-ops
 description: Fast Azure DevOps operations agent. Moves work item states, creates branches, opens PRs to feature branches, and links AB# work items.
 argument-hint: Work item ID + desired state or branch/PR action…
 model:
-  - GPT-5.6 Luna
-  - Claude Haiku 4.5
-  - MAI-Code-1-Flash
+  - gpt-5.6-luna
+  - claude-haiku-4.5
+  - mai-code-1-flash
 target: vscode
 tools:
   - execute/runInTerminal

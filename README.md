@@ -22,17 +22,19 @@ This repo lives at `dev/Agents` as a **sibling** of product repos.
 
 ## Agents and models
 
-| Agent | Role | Model |
-|-------|------|-------|
-| `sdlc-orchestrator` | Route phases, enforce process | GPT-5.6 Terra |
-| `analyst` | Multi-repo analysis + docs | GPT-5.6 Sol |
-| `tech-pm` | Findings → PRD | Claude Opus 4.8 |
-| `ado-planner` | PRD → Features / Stories / Tasks (asks for Epic first) | Claude Sonnet 5 |
-| `ado-ops` | State moves, branch / PR linking | GPT-5.6 Luna |
-| `implementer` | Vertical-slice .NET 10 implementation | GPT-5.3-Codex |
-| `code-reviewer` | Review + findings doc → ADO bugs | GPT-5.6 Sol |
+Model fields use **slug IDs** (see [docs/MODEL-IDS.md](docs/MODEL-IDS.md)).
 
-Model IDs follow [GitHub Copilot model comparison](https://docs.github.com/en/copilot/reference/ai-models/model-comparison). Availability depends on your Copilot plan.
+| Agent | Role | Model (primary) |
+|-------|------|-----------------|
+| `sdlc-orchestrator` | Route phases, enforce process | `gpt-5.6-terra` |
+| `analyst` | Multi-repo analysis + docs | `gpt-5.6-sol` |
+| `tech-pm` | Findings → PRD | `claude-opus-4.8` |
+| `ado-planner` | PRD → Features / Stories / Tasks (asks for Epic first) | `claude-sonnet-5` |
+| `ado-ops` | State moves, branch / PR linking | `gpt-5.6-luna` |
+| `implementer` | Vertical-slice .NET 10 implementation | `gpt-5.3-codex` |
+| `code-reviewer` | Review + findings doc → ADO bugs | `gpt-5.6-sol` |
+
+Availability depends on your Copilot plan. Fallbacks are listed in each agent file.
 
 ## Layout
 
@@ -59,6 +61,7 @@ templates/          # PRD, analysis, review, workspace
 
 ## Docs
 
+- [MODEL-IDS.md](docs/MODEL-IDS.md) — Copilot model slug IDs for agent frontmatter
 - [SETUP.md](docs/SETUP.md) — install CodeGraph, az, workspace
 - [WORKFLOW.md](docs/WORKFLOW.md) — end-to-end SDLC phases
 - [ADO-STATES.md](docs/ADO-STATES.md) — Agile state machine
