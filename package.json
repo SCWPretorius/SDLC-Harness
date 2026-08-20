@@ -1,0 +1,37 @@
+{
+  "name": "sdlc-copilot-harness",
+  "version": "1.0.0",
+  "description": "Install the SDLC GitHub Copilot harness: agents, skills, and a multi-root VS Code workspace",
+  "type": "module",
+  "bin": {
+    "sdlc-copilot-harness": "bin/install.mjs"
+  },
+  "files": [
+    "bin",
+    ".github",
+    "docs",
+    "scripts",
+    "templates",
+    "README.md",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "github-copilot",
+    "vscode",
+    "sdlc",
+    "azure-devops",
+    "agents"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/example/sdlc-copilot-harness.git"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "picocolors": "^1.1.1"
+  }
+}

@@ -8,20 +8,40 @@
 - CodeGraph CLI
 - Access to your Azure DevOps org/project and Git repos
 
-## 1. Place the harness
+## 1. Place the harness (npx)
 
-This repo (`Agents`) should sit as a sibling of product repos:
+```bash
+npx sdlc-copilot-harness
+```
+
+Prompts for parent folder, harness name, sibling folders, workspace filename, and optional `~/.copilot` install. Writes `sdlc.code-workspace` into the parent with real folder entries and `chat.agentFilesLocations` pointed at the harness.
+
+Until the package is on npm:
+
+```bash
+cd /path/to/Agents
+npm install
+node bin/install.mjs
+```
+
+Non-interactive:
+
+```bash
+node bin/install.mjs --yes --parent ~/dev --folders Agents,Contoso.Api,Fabrikam.Web --no-personal
+```
+
+Layout after install:
 
 ```text
 dev/
-  Agents/                 # this harness
-  Product-Alpha/          # mock — replace with your repos
-  Product-Beta/
+  Agents/                 # harness (.github/agents, skills, …)
+  Contoso.Api/
+  Fabrikam.Web/
   ...
-  sdlc.code-workspace     # copy from Agents/templates/
+  sdlc.code-workspace
 ```
 
-Copy `templates/sdlc.code-workspace` to `dev/sdlc.code-workspace`, swap mock folder names for your real sibling repos, then **File → Open Workspace from File…** in VS Code.
+Then **File → Open Workspace from File…** in VS Code.
 
 ## 2. Azure CLI
 

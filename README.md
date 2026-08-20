@@ -8,17 +8,54 @@ Not for Cursor. Stack: Azure DevOps (`az` CLI), C# .NET 10, Azure platform, Agil
 
 ## Quick start
 
-This repo lives at `dev/Agents` as a **sibling** of product repos.
+### Install with npx (recommended)
 
-1. Copy [`templates/sdlc.code-workspace`](templates/sdlc.code-workspace) to the parent folder:
-   `dev/sdlc.code-workspace`
-2. Replace mock `Product-*` folder entries with your real sibling repos, then open that file in VS Code (**File → Open Workspace from File…**).
-3. Install prerequisites (see [docs/SETUP.md](docs/SETUP.md)):
+From any machine with Node 18+:
+
+```bash
+npx sdlc-copilot-harness
+```
+
+The installer asks for:
+
+1. **Parent folder** — directory that holds sibling product repos  
+2. **Harness folder name** — default `Agents` (created/copied if missing)  
+3. **Which sibling folders** to put in the multi-root workspace  
+4. **Workspace file name** — default `sdlc.code-workspace` (written into the parent)  
+5. Optional **~/.copilot** personal install (symlink or copy)
+
+Then open the generated `.code-workspace` in VS Code.
+
+Non-interactive example:
+
+```bash
+npx sdlc-copilot-harness --yes \
+  --parent ~/dev \
+  --agents-name Agents \
+  --folders Agents,Contoso.Api,Fabrikam.Web \
+  --workspace sdlc.code-workspace \
+  --personal --personal-mode symlink
+```
+
+Until published to npm, run from this repo:
+
+```bash
+node bin/install.mjs
+# or
+npx --yes /path/to/Agents
+```
+
+### Manual setup
+
+This repo lives as a **sibling** of product repos.
+
+1. Copy [`templates/sdlc.code-workspace`](templates/sdlc.code-workspace) to the parent folder, or use the npx installer above.
+2. Install prerequisites (see [docs/SETUP.md](docs/SETUP.md)):
    - Azure CLI + `azure-devops` extension
    - CodeGraph CLI wired for Copilot VS Code
    - `codegraph init` in **each** product repo
-4. Optional personal install: `./scripts/install-copilot-harness.sh`
-5. In Copilot Chat, pick **sdlc-orchestrator** (or a specialist agent) and describe the request.
+3. Optional: `./scripts/install-copilot-harness.sh`
+4. In Copilot Chat, pick **sdlc-orchestrator** (or **sdlc-orchestrator-economy**) and describe the request.
 
 ## Agents and models
 
@@ -63,9 +100,10 @@ templates/          # PRD, analysis, review, workspace
 
 ## Docs
 
+- [SETUP.md](docs/SETUP.md) — install CodeGraph, az, workspace
+- [PUBLISH.md](docs/PUBLISH.md) — publish package for `npx sdlc-copilot-harness`
 - [ECONOMY.md](docs/ECONOMY.md) — credit-saving `*-economy` agents
 - [MODEL-IDS.md](docs/MODEL-IDS.md) — Copilot model slug IDs for agent frontmatter
-- [SETUP.md](docs/SETUP.md) — install CodeGraph, az, workspace
 - [WORKFLOW.md](docs/WORKFLOW.md) — end-to-end SDLC phases
 - [ADO-STATES.md](docs/ADO-STATES.md) — Agile state machine
 - [BRANCHING.md](docs/BRANCHING.md) — branch and PR rules
