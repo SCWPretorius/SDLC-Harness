@@ -7,6 +7,7 @@
  * - copies/updates the SDLC Harness into that folder
  * - detects sibling directories and builds sdlc.code-workspace
  * - optionally links agents/skills into ~/.copilot
+ * - optionally installs CodeGraph CLI, wires Copilot VS Code, inits each product repo
  *
  * Non-interactive:
  *   npx sdlc-copilot-harness --yes \
@@ -14,11 +15,13 @@
  *     --agents-name "SDLC Harness" \
  *     --workspace sdlc.code-workspace \
  *     --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
- *     --personal --personal-mode symlink
+ *     --personal --personal-mode symlink \
+ *     --codegraph
  */
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as p from "@clack/prompts";
 import c from "picocolors";
@@ -48,6 +51,7 @@ function parseArgs(argv) {
     folders: null,
     personal: null,
     personalMode: null,
+    codegraph: null,
     help: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -86,6 +90,12 @@ function parseArgs(argv) {
       case "--personal-mode":
         out.personalMode = next();
         break;
+      case "--codegraph":
+        out.codegraph = true;
+        break;
+      case "--no-codegraph":
+        out.codegraph = false;
+        break;
       default:
         if (a.startsWith("-")) {
           throw new Error(`Unknown flag: ${a}`);
@@ -107,9 +117,155 @@ Options:
   --folders <a,b,c>        Folders to include (comma-separated)
   --personal / --no-personal
   --personal-mode symlink|copy
+  --codegraph / --no-codegraph
+                           Install CodeGraph CLI (if needed), wire Copilot VS Code,
+                           and run codegraph init in each selected product repo
   -y, --yes                Non-interactive (requires --parent)
   -h, --help
 `);
+}
+
+function commandExists(cmd) {
+  try {
+    execFileSync(process.platform === "win32" ? "where" : "which", [cmd], {
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveCodegraphRunner() {
+  if (commandExists("codegraph")) {
+    return { cmd: "codegraph", prefix: [], label: "codegraph" };
+  }
+  if (commandExists("npx")) {
+    return {
+      cmd: "npx",
+      prefix: ["--yes", "@colbymchenry/codegraph"],
+      label: "npx @colbymchenry/codegraph",
+    };
+  }
+  return null;
+}
+
+function ensureCodegraphCli() {
+  let runner = resolveCodegraphRunner();
+  if (runner?.cmd === "codegraph") {
+    return { runner, installed: false };
+  }
+
+  if (!commandExists("npm")) {
+    throw new Error(
+      "CodeGraph CLI not found and npm is unavailable. Install Node/npm, then re-run with --codegraph, or: curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh",
+    );
+  }
+
+  const install = spawnSync(
+    "npm",
+    ["install", "-g", "@colbymchenry/codegraph"],
+    { stdio: "inherit", shell: process.platform === "win32" },
+  );
+  if (install.status !== 0) {
+    throw new Error(
+      "Failed to install @colbymchenry/codegraph globally. Try: npm i -g @colbymchenry/codegraph",
+    );
+  }
+
+  runner = resolveCodegraphRunner();
+  if (!runner) {
+    throw new Error(
+      "CodeGraph installed but not on PATH. Open a new terminal and re-run, or add npm global bin to PATH.",
+    );
+  }
+  return { runner, installed: true };
+}
+
+function runCodegraph(runner, args, opts = {}) {
+  const fullArgs = [...runner.prefix, ...args];
+  const result = spawnSync(runner.cmd, fullArgs, {
+    stdio: opts.stdio ?? "inherit",
+    cwd: opts.cwd,
+    shell: process.platform === "win32",
+    env: process.env,
+  });
+  return {
+    ok: result.status === 0,
+    status: result.status,
+    stderr: result.stderr?.toString?.() ?? "",
+  };
+}
+
+function setupAndInitCodegraph({
+  parentDir,
+  agentsName,
+  selectedFolders,
+}) {
+  const lines = [];
+  const { runner, installed } = ensureCodegraphCli();
+  lines.push(
+    installed
+      ? `CLI: installed @colbymchenry/codegraph (${runner.label})`
+      : `CLI: using ${runner.label}`,
+  );
+
+  const wire = runCodegraph(runner, [
+    "install",
+    "--target=copilot-vscode",
+    "--yes",
+  ]);
+  if (!wire.ok) {
+    const fallback = runCodegraph(runner, ["install", "--target=auto", "--yes"]);
+    if (!fallback.ok) {
+      throw new Error(
+        "codegraph install failed (tried --target=copilot-vscode and --target=auto)",
+      );
+    }
+    lines.push("Wire: codegraph install --target=auto --yes");
+  } else {
+    lines.push("Wire: codegraph install --target=copilot-vscode --yes");
+  }
+
+  const productFolders = selectedFolders.filter((name) => name !== agentsName);
+  if (productFolders.length === 0) {
+    lines.push("Init: no product folders selected (harness skipped)");
+    return { lines, inits: [] };
+  }
+
+  const inits = [];
+  for (const name of productFolders) {
+    const projectPath = path.join(parentDir, name);
+    if (!isDirectory(projectPath)) {
+      inits.push({ name, status: "missing" });
+      lines.push(`Init: skip ${name} (folder missing)`);
+      continue;
+    }
+
+    const already = fs.existsSync(path.join(projectPath, ".codegraph"));
+    const init = runCodegraph(runner, ["init", projectPath], {
+      // init can be long; inherit so user sees progress
+      stdio: "inherit",
+    });
+    if (!init.ok) {
+      inits.push({ name, status: "failed" });
+      lines.push(`Init: FAILED ${name}`);
+      continue;
+    }
+    inits.push({ name, status: already ? "rebuilt" : "ok" });
+    lines.push(
+      already ? `Init: ${name} (existing .codegraph refreshed)` : `Init: ${name}`,
+    );
+  }
+
+  const failed = inits.filter((i) => i.status === "failed");
+  if (failed.length > 0) {
+    throw new Error(
+      `CodeGraph init failed for: ${failed.map((f) => f.name).join(", ")}`,
+    );
+  }
+
+  return { lines, inits };
 }
 
 function isDirectory(p) {
@@ -253,6 +409,8 @@ function finish({
   personal,
   personalMode,
   personalLines,
+  codegraph,
+  codegraphLines,
 }) {
   p.note(
     [
@@ -263,22 +421,29 @@ function finish({
       personal
         ? `~/.copilot: ${personalLines.length} links/copies (${personalMode})`
         : "~/.copilot: skipped",
+      codegraph
+        ? `CodeGraph:  set up (${(codegraphLines || []).filter((l) => l.startsWith("Init:")).length} repo inits)`
+        : "CodeGraph:  skipped",
     ].join("\n"),
     "Result",
   );
 
-  p.note(
-    [
-      "1. VS Code → File → Open Workspace from File…",
-      `   ${workspacePath}`,
-      "2. az login && az extension add --name azure-devops --upgrade",
-      "3. codegraph install --target=copilot-vscode --yes",
-      "4. codegraph init in each product repo",
-      "5. Restart VS Code / Copilot",
-      "6. Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)",
-    ].join("\n"),
-    "Next",
-  );
+  const next = [
+    "1. VS Code → File → Open Workspace from File…",
+    `   ${workspacePath}`,
+    "2. az login && az extension add --name azure-devops --upgrade",
+  ];
+  if (codegraph) {
+    next.push("3. Restart VS Code / Copilot (loads CodeGraph MCP)");
+    next.push("4. Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)");
+  } else {
+    next.push("3. codegraph install --target=copilot-vscode --yes");
+    next.push("4. codegraph init in each product repo");
+    next.push("5. Restart VS Code / Copilot");
+    next.push("6. Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)");
+  }
+
+  p.note(next.join("\n"), "Next");
 
   p.outro(c.green("Done. Open the workspace and start with sdlc-orchestrator."));
 }
@@ -381,6 +546,13 @@ async function runInteractive(args) {
     personalMode = mode;
   }
 
+  const productCount = selectedFolders.filter((n) => n !== agentsName).length;
+  const codegraph = await p.confirm({
+    message: `Set up CodeGraph? (CLI if needed, wire Copilot VS Code, init ${productCount} product repo${productCount === 1 ? "" : "s"})`,
+    initialValue: args.codegraph ?? true,
+  });
+  if (p.isCancel(codegraph)) return cancel();
+
   return {
     parentDir,
     agentsName,
@@ -388,6 +560,7 @@ async function runInteractive(args) {
     workspaceFileName: workspaceFileName.trim(),
     personal,
     personalMode,
+    codegraph,
   };
 }
 
@@ -414,6 +587,7 @@ function runNonInteractive(args) {
     workspaceFileName: args.workspace || "sdlc.code-workspace",
     personal: args.personal ?? true,
     personalMode: args.personalMode || "symlink",
+    codegraph: args.codegraph ?? false,
   };
 }
 
@@ -453,6 +627,18 @@ async function main() {
 
   s.stop("Install complete");
 
+  let codegraphLines = [];
+  if (config.codegraph) {
+    p.log.step("Setting up CodeGraph (CLI, Copilot wire, init per product repo)…");
+    const result = setupAndInitCodegraph({
+      parentDir: config.parentDir,
+      agentsName: config.agentsName,
+      selectedFolders: config.selectedFolders,
+    });
+    codegraphLines = result.lines;
+    p.note(codegraphLines.join("\n"), "CodeGraph");
+  }
+
   finish({
     parentDir: config.parentDir,
     agentsRoot,
@@ -462,6 +648,8 @@ async function main() {
     personal: config.personal,
     personalMode: config.personalMode,
     personalLines,
+    codegraph: config.codegraph,
+    codegraphLines,
   });
 }
 

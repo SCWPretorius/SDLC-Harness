@@ -14,7 +14,7 @@
 npx sdlc-copilot-harness
 ```
 
-Prompts for parent folder, harness name, sibling folders, workspace filename, and optional `~/.copilot` install. Writes `sdlc.code-workspace` into the parent with real folder entries and `chat.agentFilesLocations` pointed at the harness.
+Prompts for parent folder, harness name, sibling folders, workspace filename, optional `~/.copilot` install, and optional **CodeGraph** setup (CLI + Copilot wire + `init` in each product repo). Writes `sdlc.code-workspace` into the parent with real folder entries and `chat.agentFilesLocations` pointed at the harness.
 
 Until the package is on npm:
 
@@ -27,16 +27,24 @@ node bin/install.mjs
 Non-interactive:
 
 ```bash
-node bin/install.mjs --yes --parent ~/dev --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" --no-personal
+node bin/install.mjs --yes --parent ~/dev --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" --no-personal --codegraph
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--codegraph` | Install CodeGraph CLI if missing, run `codegraph install --target=copilot-vscode --yes`, then `codegraph init` in each selected folder except the harness |
+| `--no-codegraph` | Skip CodeGraph (default with `--yes` unless `--codegraph` is set) |
 
 Layout after install:
 
 ```text
-dev/
+~/dev/
   SDLC Harness/          # harness (.github/agents, skills, …)
   Contoso.Api/
   Fabrikam.Web/
+  Northwind.Services/
   ...
   sdlc.code-workspace
 ```
@@ -54,14 +62,22 @@ az devops configure --defaults organization=https://dev.azure.com/<ORG> project=
 
 ## 3. CodeGraph for Copilot (VS Code)
 
+**Preferred:** answer yes to the installer’s CodeGraph prompt, or pass `--codegraph` in non-interactive mode. That will:
+
+1. Install `@colbymchenry/codegraph` globally if `codegraph` is not on PATH  
+2. Run `codegraph install --target=copilot-vscode --yes` (falls back to `--target=auto`)  
+3. Run `codegraph init` in each selected **product** repo (harness folder is skipped)
+
+**Manual:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
 # new terminal
 codegraph install --target=copilot-vscode --yes
 
 # per product repo
-cd ../product-a && codegraph init
-cd ../product-b && codegraph init
+cd ../Contoso.Api && codegraph init
+cd ../Fabrikam.Web && codegraph init
 ```
 
 Restart VS Code so Copilot loads the CodeGraph MCP server.

@@ -22,7 +22,8 @@ The installer asks for:
 2. **Harness folder name** — default `SDLC Harness` (created/copied if missing)  
 3. **Which sibling folders** to put in the multi-root workspace  
 4. **Workspace file name** — default `sdlc.code-workspace` (written into the parent)  
-5. Optional **~/.copilot** personal install (symlink or copy)
+5. Optional **~/.copilot** personal install (symlink or copy)  
+6. Optional **CodeGraph** — install CLI if needed, wire Copilot VS Code, `codegraph init` in each selected product repo (harness folder skipped)
 
 Then open the generated `.code-workspace` in VS Code.
 
@@ -34,7 +35,8 @@ npx sdlc-copilot-harness --yes \
   --agents-name "SDLC Harness" \
   --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
   --workspace sdlc.code-workspace \
-  --personal --personal-mode symlink
+  --personal --personal-mode symlink \
+  --codegraph
 ```
 
 Until published to npm, run from this repo:
@@ -52,8 +54,7 @@ This repo lives as a **sibling** of product repos.
 1. Copy [`templates/sdlc.code-workspace`](templates/sdlc.code-workspace) to the parent folder, or use the npx installer above.
 2. Install prerequisites (see [docs/SETUP.md](docs/SETUP.md)):
    - Azure CLI + `azure-devops` extension
-   - CodeGraph CLI wired for Copilot VS Code
-   - `codegraph init` in **each** product repo
+   - CodeGraph (use the installer’s **CodeGraph** option, or set up manually)
 3. Optional: `./scripts/install-copilot-harness.sh`
 4. In Copilot Chat:
    - **Quality:** `sdlc-orchestrator`

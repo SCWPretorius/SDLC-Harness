@@ -9,20 +9,12 @@
       "path": "./Contoso.Api"
     },
     {
-      "name": "Northwind.Services",
-      "path": "./Northwind.Services"
-    },
-    {
-      "name": "Acme.Portal",
-      "path": "./Acme.Portal"
-    },
-    {
-      "name": "Contoso.Admin",
-      "path": "./Contoso.Admin"
-    },
-    {
       "name": "Fabrikam.Web",
       "path": "./Fabrikam.Web"
+    },
+    {
+      "name": "Northwind.Services",
+      "path": "./Northwind.Services"
     }
   ],
   "settings": {
