@@ -9,7 +9,11 @@
  * - optionally links agents/skills into ~/.copilot
  * - optionally installs CodeGraph CLI, wires Copilot VS Code, inits each product repo
  *
- * Non-interactive:
+ * Uninstall (reverses the above):
+ *   npx sdlc-copilot-harness uninstall
+ *   npx sdlc-copilot-harness uninstall --yes --parent ~/dev
+ *
+ * Non-interactive install:
  *   npx sdlc-copilot-harness --yes \
  *     --parent ~/dev \
  *     --agents-name "SDLC Harness" \
@@ -42,6 +46,10 @@ const SKIP_DIR_NAMES = new Set([
   ".next",
 ]);
 
+const STATE_FILENAME = ".sdlc-copilot-harness.json";
+const LAST_INSTALL_DIR = path.join(os.homedir(), ".sdlc-copilot-harness");
+const LAST_INSTALL_FILE = path.join(LAST_INSTALL_DIR, "last-install.json");
+
 function parseArgs(argv) {
   const out = {
     yes: false,
@@ -53,10 +61,20 @@ function parseArgs(argv) {
     personalMode: null,
     codegraph: null,
     help: false,
+    uninstall: false,
+    keepPersonal: false,
+    keepWorkspace: false,
+    keepHarness: false,
+    keepCodegraph: false,
+    removeCodegraphCli: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i];
+    if (i === 0 && (a === "uninstall" || a === "install")) {
+      if (a === "uninstall") out.uninstall = true;
+      continue;
+    }
     switch (a) {
       case "-h":
       case "--help":
@@ -65,6 +83,9 @@ function parseArgs(argv) {
       case "-y":
       case "--yes":
         out.yes = true;
+        break;
+      case "--uninstall":
+        out.uninstall = true;
         break;
       case "--parent":
         out.parent = next();
@@ -96,6 +117,21 @@ function parseArgs(argv) {
       case "--no-codegraph":
         out.codegraph = false;
         break;
+      case "--keep-personal":
+        out.keepPersonal = true;
+        break;
+      case "--keep-workspace":
+        out.keepWorkspace = true;
+        break;
+      case "--keep-harness":
+        out.keepHarness = true;
+        break;
+      case "--keep-codegraph":
+        out.keepCodegraph = true;
+        break;
+      case "--remove-codegraph-cli":
+        out.removeCodegraphCli = true;
+        break;
       default:
         if (a.startsWith("-")) {
           throw new Error(`Unknown flag: ${a}`);
@@ -109,8 +145,10 @@ function printHelp() {
   console.log(`Usage:
   npx sdlc-copilot-harness
   npx sdlc-copilot-harness --yes --parent <dir> [--folders A,B,C]
+  npx sdlc-copilot-harness uninstall
+  npx sdlc-copilot-harness uninstall --yes --parent <dir>
 
-Options:
+Install options:
   --parent <dir>           Parent folder containing sibling repos
   --agents-name <name>     Harness folder name (default: SDLC Harness)
   --workspace <file>       Workspace filename (default: sdlc.code-workspace)
@@ -120,8 +158,18 @@ Options:
   --codegraph / --no-codegraph
                            Install CodeGraph CLI (if needed), wire Copilot VS Code,
                            and run codegraph init in each selected product repo
-  -y, --yes                Non-interactive (requires --parent)
+  -y, --yes                Non-interactive (install requires --parent)
   -h, --help
+
+Uninstall options:
+  uninstall, --uninstall   Remove what this installer created
+  --parent <dir>           Parent folder used at install (or last-install is used)
+  --keep-personal          Leave ~/.copilot agents/skills in place
+  --keep-workspace         Leave the .code-workspace file
+  --keep-harness           Leave the harness folder
+  --keep-codegraph         Leave CodeGraph indexes and Copilot wire
+  --remove-codegraph-cli   Also uninstall the CodeGraph CLI (only if this installer added it)
+  -y, --yes                Non-interactive uninstall
 `);
 }
 
@@ -210,6 +258,7 @@ function setupAndInitCodegraph({
       : `CLI: using ${runner.label}`,
   );
 
+  let wireTarget = "copilot-vscode";
   const wire = runCodegraph(runner, [
     "install",
     "--target=copilot-vscode",
@@ -222,6 +271,7 @@ function setupAndInitCodegraph({
         "codegraph install failed (tried --target=copilot-vscode and --target=auto)",
       );
     }
+    wireTarget = "auto";
     lines.push("Wire: codegraph install --target=auto --yes");
   } else {
     lines.push("Wire: codegraph install --target=copilot-vscode --yes");
@@ -265,7 +315,12 @@ function setupAndInitCodegraph({
     );
   }
 
-  return { lines, inits };
+  return {
+    lines,
+    inits,
+    cliInstalledByUs: installed,
+    wireTarget,
+  };
 }
 
 function isDirectory(p) {
@@ -289,6 +344,7 @@ function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     if (entry.name === "node_modules" || entry.name === ".git") continue;
+    if (entry.name === STATE_FILENAME) continue;
     const from = path.join(src, entry.name);
     const to = path.join(dest, entry.name);
     if (entry.isDirectory()) copyDir(from, to);
@@ -320,24 +376,27 @@ function installPersonalCopilot(agentsRoot, mode) {
   const agentsSrc = path.join(agentsRoot, ".github", "agents");
   const skillsSrc = path.join(agentsRoot, ".github", "skills");
   const lines = [];
+  const paths = [];
 
   fs.mkdirSync(path.join(targetBase, "agents"), { recursive: true });
   fs.mkdirSync(path.join(targetBase, "skills"), { recursive: true });
 
   for (const f of fs.readdirSync(agentsSrc)) {
     if (!f.endsWith(".agent.md")) continue;
-    lines.push(
-      linkOrCopy(path.join(agentsSrc, f), path.join(targetBase, "agents", f), mode),
-    );
+    const dest = path.join(targetBase, "agents", f);
+    lines.push(linkOrCopy(path.join(agentsSrc, f), dest, mode));
+    paths.push(dest);
   }
 
   for (const name of fs.readdirSync(skillsSrc)) {
     const src = path.join(skillsSrc, name);
     if (!isDirectory(src)) continue;
-    lines.push(linkOrCopy(src, path.join(targetBase, "skills", name), mode));
+    const dest = path.join(targetBase, "skills", name);
+    lines.push(linkOrCopy(src, dest, mode));
+    paths.push(dest);
   }
 
-  return lines;
+  return { lines, paths };
 }
 
 function buildWorkspace({ agentsFolderName, selectedFolders }) {
@@ -395,8 +454,8 @@ function resolveUserPath(input) {
   return path.resolve(v);
 }
 
-function cancel() {
-  p.cancel("Install cancelled.");
+function cancel(message = "Install cancelled.") {
+  p.cancel(message);
   process.exit(0);
 }
 
@@ -442,6 +501,7 @@ function finish({
     next.push("5. Restart VS Code / Copilot");
     next.push("6. Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)");
   }
+  next.push("To remove later: npx sdlc-copilot-harness uninstall");
 
   p.note(next.join("\n"), "Next");
 
@@ -591,10 +651,493 @@ function runNonInteractive(args) {
   };
 }
 
+function pathExists(p) {
+  try {
+    fs.lstatSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readJsonFile(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeHarness(dir) {
+  return fs.existsSync(
+    path.join(dir, ".github", "agents", "sdlc-orchestrator.agent.md"),
+  );
+}
+
+function inferHarnessAction(agentsRoot) {
+  if (path.resolve(agentsRoot) === path.resolve(PACKAGE_ROOT)) {
+    return "current-package";
+  }
+  if (!looksLikeHarness(agentsRoot)) return null;
+  const pkg = readJsonFile(path.join(agentsRoot, "package.json"));
+  const copiedPackage =
+    pkg?.name === "sdlc-copilot-harness" &&
+    !pathExists(path.join(agentsRoot, ".git"));
+  return copiedPackage ? "copied" : "existing";
+}
+
+function writeInstallState(state) {
+  const parentState = path.join(state.parentDir, STATE_FILENAME);
+  const body = `${JSON.stringify(state, null, 2)}\n`;
+  fs.writeFileSync(parentState, body, "utf8");
+  fs.mkdirSync(LAST_INSTALL_DIR, { recursive: true });
+  fs.writeFileSync(LAST_INSTALL_FILE, body, "utf8");
+  return parentState;
+}
+
+function loadInstallState(parentDir) {
+  if (parentDir) {
+    const fromParent = readJsonFile(path.join(parentDir, STATE_FILENAME));
+    if (fromParent) return fromParent;
+  }
+  return readJsonFile(LAST_INSTALL_FILE);
+}
+
+function listHarnessAgentFiles(agentsRoot) {
+  const dir = path.join(agentsRoot, ".github", "agents");
+  const src = isDirectory(dir)
+    ? dir
+    : path.join(PACKAGE_ROOT, ".github", "agents");
+  if (!isDirectory(src)) return [];
+  return fs.readdirSync(src).filter((f) => f.endsWith(".agent.md"));
+}
+
+function listHarnessSkillNames(agentsRoot) {
+  const dir = path.join(agentsRoot, ".github", "skills");
+  const src = isDirectory(dir)
+    ? dir
+    : path.join(PACKAGE_ROOT, ".github", "skills");
+  if (!isDirectory(src)) return [];
+  return fs
+    .readdirSync(src, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+}
+
+function discoverPersonalPaths(agentsRoot) {
+  const targetBase = path.join(os.homedir(), ".copilot");
+  const agentsRootResolved = path.resolve(agentsRoot);
+  const found = [];
+
+  for (const f of listHarnessAgentFiles(agentsRoot)) {
+    const dest = path.join(targetBase, "agents", f);
+    if (shouldRemovePersonalPath(dest, agentsRootResolved)) found.push(dest);
+  }
+  for (const name of listHarnessSkillNames(agentsRoot)) {
+    const dest = path.join(targetBase, "skills", name);
+    if (shouldRemovePersonalPath(dest, agentsRootResolved)) found.push(dest);
+  }
+  return found;
+}
+
+function shouldRemovePersonalPath(dest, agentsRootResolved) {
+  try {
+    const st = fs.lstatSync(dest);
+    if (!st.isSymbolicLink()) return false;
+    let target = fs.readlinkSync(dest);
+    if (!path.isAbsolute(target)) {
+      target = path.resolve(path.dirname(dest), target);
+    }
+    const rel = path.relative(agentsRootResolved, target);
+    return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+  } catch {
+    return false;
+  }
+}
+
+function discoverInstall(parentDir) {
+  const fromParent = readJsonFile(path.join(parentDir, STATE_FILENAME));
+  if (fromParent) return fromParent;
+  const last = readJsonFile(LAST_INSTALL_FILE);
+  if (last?.parentDir && path.resolve(last.parentDir) === path.resolve(parentDir)) {
+    return last;
+  }
+
+  const workspaceCandidates = fs
+    .readdirSync(parentDir)
+    .filter((n) => n.endsWith(".code-workspace"));
+  const workspaceFile =
+    workspaceCandidates.find((n) => n === "sdlc.code-workspace") ??
+    workspaceCandidates[0] ??
+    null;
+
+  let agentsName = "SDLC Harness";
+  let selectedFolders = [];
+  if (workspaceFile) {
+    const doc = readJsonFile(path.join(parentDir, workspaceFile));
+    if (doc?.folders?.length) {
+      selectedFolders = doc.folders.map((f) => f.name);
+      const loc = doc.settings?.["chat.agentFilesLocations"]?.[0];
+      const m =
+        typeof loc === "string"
+          ? loc.match(/workspaceFolder:([^}]+)/)
+          : null;
+      if (m?.[1]) agentsName = m[1];
+      else if (doc.folders[0]?.name) agentsName = doc.folders[0].name;
+    }
+  } else {
+    for (const name of listSiblingFolders(parentDir)) {
+      if (looksLikeHarness(path.join(parentDir, name))) {
+        agentsName = name;
+        break;
+      }
+    }
+    selectedFolders = listSiblingFolders(parentDir);
+  }
+
+  const agentsRoot = path.join(parentDir, agentsName);
+  const personalPaths = discoverPersonalPaths(agentsRoot);
+  const codegraphInits = (selectedFolders.length
+    ? selectedFolders
+    : listSiblingFolders(parentDir)
+  )
+    .filter((n) => n !== agentsName)
+    .filter((n) => fs.existsSync(path.join(parentDir, n, ".codegraph")))
+    .map((n) => ({
+      name: n,
+      status: "ok",
+      path: path.join(parentDir, n),
+    }));
+
+  const harnessAction = inferHarnessAction(agentsRoot);
+
+  return {
+    version: 1,
+    discovered: true,
+    parentDir,
+    agentsName,
+    agentsRoot,
+    harnessAction,
+    workspacePath: workspaceFile
+      ? path.join(parentDir, workspaceFile)
+      : null,
+    selectedFolders,
+    personal: personalPaths.length > 0,
+    personalPaths,
+    codegraph: codegraphInits.length > 0,
+    codegraphCliInstalledByUs: false,
+    codegraphWire: codegraphInits.length > 0 ? "copilot-vscode" : null,
+    codegraphInits,
+  };
+}
+
+function removePath(target) {
+  if (!pathExists(target)) return false;
+  fs.rmSync(target, { recursive: true, force: true });
+  return true;
+}
+
+function uninstallPersonal(paths) {
+  const removed = [];
+  for (const dest of paths) {
+    if (removePath(dest)) removed.push(dest);
+  }
+  return removed;
+}
+
+function uninstallCodegraphIndexes(inits) {
+  const lines = [];
+  const runner = resolveCodegraphRunner();
+  for (const item of inits) {
+    const projectPath = item.path || item.name;
+    if (!isDirectory(projectPath)) {
+      lines.push(`skip ${item.name} (folder missing)`);
+      continue;
+    }
+    const graphDir = path.join(projectPath, ".codegraph");
+    if (!pathExists(graphDir)) {
+      lines.push(`skip ${item.name} (no .codegraph)`);
+      continue;
+    }
+    if (runner) {
+      const result = runCodegraph(
+        runner,
+        ["uninit", projectPath, "--force"],
+        { stdio: "pipe" },
+      );
+      if (result.ok) {
+        lines.push(`uninit ${item.name}`);
+        continue;
+      }
+    }
+    removePath(graphDir);
+    lines.push(`removed ${item.name}/.codegraph`);
+  }
+  return lines;
+}
+
+function uninstallCodegraphWire(wireTarget) {
+  const runner = resolveCodegraphRunner();
+  if (!runner) {
+    return "CodeGraph CLI not on PATH; skipped Copilot unwire";
+  }
+  const target = wireTarget === "auto" ? "copilot-vscode" : (wireTarget || "copilot-vscode");
+  const result = runCodegraph(runner, [
+    "uninstall",
+    `--target=${target}`,
+    "--yes",
+    "--keep-cli",
+  ]);
+  if (!result.ok) {
+    return `codegraph uninstall --target=${target} failed (CLI left in place)`;
+  }
+  return `unwired CodeGraph from ${target}`;
+}
+
+function uninstallCodegraphCli() {
+  const lines = [];
+  if (commandExists("npm")) {
+    const result = spawnSync(
+      "npm",
+      ["uninstall", "-g", "@colbymchenry/codegraph"],
+      { stdio: "inherit", shell: process.platform === "win32" },
+    );
+    if (result.status === 0) {
+      lines.push("uninstalled npm global @colbymchenry/codegraph");
+    } else {
+      lines.push("npm uninstall -g @colbymchenry/codegraph failed");
+    }
+  } else {
+    lines.push("npm not available; skipped CLI uninstall");
+  }
+  return lines;
+}
+
+function clearInstallState(parentDir) {
+  removePath(path.join(parentDir, STATE_FILENAME));
+  const last = readJsonFile(LAST_INSTALL_FILE);
+  if (last && path.resolve(last.parentDir) === path.resolve(parentDir)) {
+    removePath(LAST_INSTALL_FILE);
+  }
+}
+
+function defaultUninstallTargets(state, args) {
+  const selected = [];
+  if (state.personalPaths?.length && !args.keepPersonal) selected.push("personal");
+  if (state.workspacePath && !args.keepWorkspace) selected.push("workspace");
+  if (
+    !args.keepHarness &&
+    state.harnessAction === "copied" &&
+    path.resolve(state.agentsRoot) !== path.resolve(PACKAGE_ROOT)
+  ) {
+    selected.push("harness");
+  }
+  if (!args.keepCodegraph) {
+    if (state.codegraphInits?.length) selected.push("codegraph-indexes");
+    if (state.codegraph || state.codegraphWire) selected.push("codegraph-wire");
+  }
+  if (args.removeCodegraphCli && state.codegraphCliInstalledByUs) {
+    selected.push("codegraph-cli");
+  }
+  return selected;
+}
+
+function buildUninstallOptions(state) {
+  const options = [];
+  const personalCount = state.personalPaths?.length ?? 0;
+  if (personalCount > 0) {
+    options.push({
+      value: "personal",
+      label: `Remove ~/.copilot agents/skills (${personalCount} items)`,
+    });
+  }
+  if (state.workspacePath && pathExists(state.workspacePath)) {
+    options.push({
+      value: "workspace",
+      label: `Remove workspace file (${path.basename(state.workspacePath)})`,
+    });
+  }
+  const harnessIsPackage =
+    path.resolve(state.agentsRoot) === path.resolve(PACKAGE_ROOT);
+  if (
+    state.agentsRoot &&
+    looksLikeHarness(state.agentsRoot) &&
+    !harnessIsPackage
+  ) {
+    options.push({
+      value: "harness",
+      label: `Delete harness folder (${state.agentsName})`,
+      hint:
+        state.harnessAction === "copied"
+          ? "copied by installer"
+          : "already existed — confirm before deleting",
+    });
+  }
+  if (state.codegraphInits?.length) {
+    options.push({
+      value: "codegraph-indexes",
+      label: `Remove .codegraph indexes (${state.codegraphInits.length} product repo${state.codegraphInits.length === 1 ? "" : "s"})`,
+    });
+  }
+  if (state.codegraph || state.codegraphWire || state.codegraphInits?.length) {
+    options.push({
+      value: "codegraph-wire",
+      label: "Unwire CodeGraph from Copilot VS Code (keep CLI)",
+    });
+  }
+  if (state.codegraphCliInstalledByUs) {
+    options.push({
+      value: "codegraph-cli",
+      label: "Uninstall CodeGraph CLI (npm global)",
+      hint: "this installer added it",
+    });
+  }
+  return options;
+}
+
+async function runUninstall(args) {
+  console.log();
+  p.intro(c.bgCyan(c.black(" sdlc-copilot-harness uninstall ")));
+
+  const last = loadInstallState(
+    args.parent ? resolveUserPath(args.parent) : null,
+  );
+  const defaultParent = args.parent
+    ? resolveUserPath(args.parent)
+    : last?.parentDir || process.cwd();
+
+  let parentDir = defaultParent;
+  if (!args.yes) {
+    const parentDirRaw = await p.text({
+      message: "Parent folder used when installing",
+      placeholder: defaultParent,
+      initialValue: defaultParent,
+      validate(value) {
+        const resolved = resolveUserPath(value?.trim() || defaultParent);
+        if (!isDirectory(resolved)) return `Not a directory: ${resolved}`;
+        return undefined;
+      },
+    });
+    if (p.isCancel(parentDirRaw)) return cancel("Uninstall cancelled.");
+    parentDir = resolveUserPath(parentDirRaw.trim() || defaultParent);
+  } else if (!isDirectory(parentDir)) {
+    throw new Error(`Not a directory: ${parentDir}`);
+  }
+
+  const state = discoverInstall(parentDir);
+  if (!state.agentsRoot) {
+    state.agentsRoot = path.join(parentDir, state.agentsName || "SDLC Harness");
+  }
+  if (!state.personalPaths) {
+    state.personalPaths = discoverPersonalPaths(state.agentsRoot);
+  } else {
+    const extra = discoverPersonalPaths(state.agentsRoot);
+    state.personalPaths = Array.from(new Set([...state.personalPaths, ...extra]));
+  }
+  if (!Array.isArray(state.codegraphInits)) state.codegraphInits = [];
+  state.codegraphInits = state.codegraphInits.map((item) => ({
+    ...item,
+    path: item.path || path.join(parentDir, item.name),
+  }));
+
+  p.note(
+    [
+      `Parent:     ${parentDir}`,
+      `Harness:    ${state.agentsRoot}${state.discovered ? " (discovered)" : ""}`,
+      `Workspace:  ${state.workspacePath || "not found"}`,
+      `~/.copilot: ${state.personalPaths.length} item(s)`,
+      `CodeGraph:  ${state.codegraphInits.length} index(es)${state.codegraphWire ? `, wire=${state.codegraphWire}` : ""}`,
+    ].join("\n"),
+    "Found",
+  );
+
+  const options = buildUninstallOptions(state);
+  if (options.length === 0) {
+    clearInstallState(parentDir);
+    p.outro("Nothing to uninstall.");
+    return;
+  }
+
+  let selected;
+  if (args.yes) {
+    selected = defaultUninstallTargets(state, args).filter((id) =>
+      options.some((o) => o.value === id),
+    );
+  } else {
+    const picked = await p.multiselect({
+      message: "What should be removed?",
+      options,
+      initialValues: defaultUninstallTargets(state, args).filter((id) =>
+        options.some((o) => o.value === id),
+      ),
+      required: false,
+    });
+    if (p.isCancel(picked)) return cancel("Uninstall cancelled.");
+    selected = picked.map(String);
+  }
+
+  if (selected.length === 0) {
+    p.outro("Nothing selected. Left as-is.");
+    return;
+  }
+
+  if (!args.yes) {
+    const ok = await p.confirm({
+      message: `Remove ${selected.length} item group${selected.length === 1 ? "" : "s"}? This cannot be undone.`,
+      initialValue: true,
+    });
+    if (p.isCancel(ok) || !ok) return cancel("Uninstall cancelled.");
+  }
+
+  const s = p.spinner();
+  s.start("Uninstalling");
+  const report = [];
+
+  if (selected.includes("personal")) {
+    const removed = uninstallPersonal(state.personalPaths);
+    report.push(`~/.copilot: removed ${removed.length} item(s)`);
+  }
+  if (selected.includes("codegraph-indexes")) {
+    const lines = uninstallCodegraphIndexes(state.codegraphInits);
+    report.push(...lines.map((l) => `CodeGraph: ${l}`));
+  }
+  if (selected.includes("codegraph-wire")) {
+    report.push(`CodeGraph: ${uninstallCodegraphWire(state.codegraphWire)}`);
+  }
+  if (selected.includes("codegraph-cli")) {
+    report.push(...uninstallCodegraphCli().map((l) => `CodeGraph: ${l}`));
+  }
+  if (selected.includes("workspace") && state.workspacePath) {
+    report.push(
+      removePath(state.workspacePath)
+        ? `Workspace: removed ${state.workspacePath}`
+        : `Workspace: already gone (${state.workspacePath})`,
+    );
+  }
+  if (selected.includes("harness")) {
+    if (path.resolve(state.agentsRoot) === path.resolve(PACKAGE_ROOT)) {
+      report.push("Harness: skipped (this is the package itself)");
+    } else if (removePath(state.agentsRoot)) {
+      report.push(`Harness: removed ${state.agentsRoot}`);
+    } else {
+      report.push(`Harness: already gone (${state.agentsRoot})`);
+    }
+  }
+
+  clearInstallState(parentDir);
+  s.stop("Uninstall complete");
+  p.note(report.join("\n"), "Removed");
+  p.outro(c.green("Done. Restart VS Code / Copilot if it was open."));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     printHelp();
+    return;
+  }
+  if (args.uninstall) {
+    await runUninstall(args);
     return;
   }
 
@@ -621,11 +1164,34 @@ async function main() {
   );
 
   let personalLines = [];
+  let personalPaths = [];
   if (config.personal) {
-    personalLines = installPersonalCopilot(agentsRoot, config.personalMode);
+    const personal = installPersonalCopilot(agentsRoot, config.personalMode);
+    personalLines = personal.lines;
+    personalPaths = personal.paths;
   }
 
   s.stop("Install complete");
+
+  const state = {
+    version: 1,
+    installedAt: new Date().toISOString(),
+    parentDir: config.parentDir,
+    agentsName: config.agentsName,
+    agentsRoot,
+    harnessAction: action,
+    workspacePath,
+    workspaceFileName: config.workspaceFileName,
+    selectedFolders: config.selectedFolders,
+    personal: config.personal,
+    personalMode: config.personalMode,
+    personalPaths,
+    codegraph: config.codegraph,
+    codegraphCliInstalledByUs: false,
+    codegraphWire: null,
+    codegraphInits: [],
+  };
+  writeInstallState(state);
 
   let codegraphLines = [];
   if (config.codegraph) {
@@ -636,6 +1202,13 @@ async function main() {
       selectedFolders: config.selectedFolders,
     });
     codegraphLines = result.lines;
+    state.codegraphCliInstalledByUs = result.cliInstalledByUs;
+    state.codegraphWire = result.wireTarget;
+    state.codegraphInits = result.inits.map((item) => ({
+      ...item,
+      path: path.join(config.parentDir, item.name),
+    }));
+    writeInstallState(state);
     p.note(codegraphLines.join("\n"), "CodeGraph");
   }
 

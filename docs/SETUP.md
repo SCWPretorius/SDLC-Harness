@@ -30,12 +30,22 @@ Non-interactive:
 node bin/install.mjs --yes --parent ~/dev --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" --no-personal --codegraph
 ```
 
+Uninstall (interactive prompts, or `--yes`):
+
+```bash
+npx sdlc-copilot-harness uninstall
+node bin/install.mjs uninstall --yes --parent ~/dev
+```
+
+Removes the workspace file, `~/.copilot` links/copies, CodeGraph indexes + Copilot wire, and the harness folder if this installer copied it. Product repos are left untouched. Use `--keep-harness`, `--keep-workspace`, `--keep-personal`, or `--keep-codegraph` to leave pieces in place.
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
 | `--codegraph` | Install CodeGraph CLI if missing, run `codegraph install --target=copilot-vscode --yes`, then `codegraph init` in each selected folder except the harness |
 | `--no-codegraph` | Skip CodeGraph (default with `--yes` unless `--codegraph` is set) |
+| `uninstall` | Reverse an install (see above) |
 
 Layout after install:
 

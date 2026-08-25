@@ -39,10 +39,23 @@ npx sdlc-copilot-harness --yes \
   --codegraph
 ```
 
+### Uninstall
+
+```bash
+npx sdlc-copilot-harness uninstall
+```
+
+Removes the generated workspace file, `~/.copilot` agents/skills this installer added, CodeGraph indexes it created (and Copilot wiring), and the copied harness folder. Product repos are never deleted. Non-interactive:
+
+```bash
+npx sdlc-copilot-harness uninstall --yes --parent ~/dev
+```
+
 Until published to npm, run from this repo:
 
 ```bash
 node bin/install.mjs
+node bin/install.mjs uninstall
 # or
 npx --yes "/path/to/SDLC Harness"
 ```
