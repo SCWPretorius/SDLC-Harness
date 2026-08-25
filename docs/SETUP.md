@@ -27,7 +27,7 @@ node bin/install.mjs
 Non-interactive:
 
 ```bash
-node bin/install.mjs --yes --parent ~/dev --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" --no-personal --codegraph
+node bin/install.mjs --yes --parent ~/dev --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" --no-personal --codegraph --caveman
 ```
 
 Uninstall (interactive prompts, or `--yes`):
@@ -37,7 +37,7 @@ npx sdlc-copilot-harness uninstall
 node bin/install.mjs uninstall --yes --parent ~/dev
 ```
 
-Removes the workspace file, `~/.copilot` links/copies, CodeGraph indexes + Copilot wire, and the harness folder if this installer copied it. Product repos are left untouched. Use `--keep-harness`, `--keep-workspace`, `--keep-personal`, or `--keep-codegraph` to leave pieces in place.
+Removes the workspace file, `~/.copilot` links/copies, CodeGraph indexes + Copilot wire, optional caveman pack skills, and the harness folder if this installer copied it. Product repos are left untouched. Use `--keep-harness`, `--keep-workspace`, `--keep-personal`, `--keep-codegraph`, or `--keep-caveman` to leave pieces in place.
 
 Flags:
 
@@ -45,6 +45,8 @@ Flags:
 |------|---------|
 | `--codegraph` | Install CodeGraph CLI if missing, run `codegraph install --target=copilot-vscode --yes`, then `codegraph init` in each selected folder except the harness |
 | `--no-codegraph` | Skip CodeGraph (default with `--yes` unless `--codegraph` is set) |
+| `--caveman` | Install optional JuliusBrussee/caveman skill pack into the harness `.github/skills` (does not replace the core `caveman` chat skill) |
+| `--no-caveman` | Skip caveman pack (default with `--yes` unless `--caveman` is set) |
 | `uninstall` | Reverse an install (see above) |
 
 Layout after install:
@@ -94,7 +96,21 @@ Restart VS Code so Copilot loads the CodeGraph MCP server.
 
 Upstream: https://github.com/colbymchenry/codegraph
 
-## 4. Optional personal install
+## 4. Optional caveman skill pack
+
+The harness always ships the core **`caveman`** chat skill (forced terse chat). The broader JuliusBrussee/caveman pack (commit/review/explore/workflow skills) is **not** in the repo by default.
+
+**Preferred:** answer yes to the installer’s caveman prompt, or pass `--caveman` in non-interactive mode. That clones the upstream pack and copies optional skills into the installed harness `.github/skills/` (core `caveman` is never replaced). Personal `~/.copilot` install then picks them up automatically.
+
+```bash
+npx sdlc-copilot-harness --yes --parent ~/dev --folders "…" --caveman
+```
+
+Skip with `--no-caveman` (default under `--yes`). Uninstall removes the pack with `--keep-caveman` available to leave it.
+
+Upstream: https://github.com/JuliusBrussee/caveman
+
+## 5. Optional personal install
 
 From the harness root:
 
@@ -104,17 +120,17 @@ From the harness root:
 
 Symlinks (or copies) agents and skills into `~/.copilot/` for reuse outside this workspace.
 
-## 5. Verify Copilot sees agents
+## 6. Verify Copilot sees agents
 
 - Command Palette → **Chat: Configure Custom Agents**
 - Confirm harness agents appear (`sdlc-orchestrator`, `analyst`, …)
 - If not, check `chat.agentFilesLocations` in the workspace file
 
-## 6. Models
+## 7. Models
 
 Agents declare preferred models from [GitHub’s model comparison](https://docs.github.com/en/copilot/reference/ai-models/model-comparison). If a model is unavailable on your plan, Copilot falls back per the agent’s model list / picker.
 
-## 7. Push harness to Azure DevOps
+## 8. Push harness to Azure DevOps
 
 ```bash
 az repos create --name SDLC-Harness   # if needed

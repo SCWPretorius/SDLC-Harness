@@ -23,7 +23,8 @@ The installer asks for:
 3. **Which sibling folders** to put in the multi-root workspace  
 4. **Workspace file name** — default `sdlc.code-workspace` (written into the parent)  
 5. Optional **~/.copilot** personal install (symlink or copy)  
-6. Optional **CodeGraph** — install CLI if needed, wire Copilot VS Code, `codegraph init` in each selected product repo (harness folder skipped)
+6. Optional **CodeGraph** — install CLI if needed, wire Copilot VS Code, `codegraph init` in each selected product repo (harness folder skipped)  
+7. Optional **caveman pack** — install JuliusBrussee/caveman skill siblings into the harness (core chat skill already included)
 
 Then open the generated `.code-workspace` in VS Code.
 
@@ -36,7 +37,8 @@ npx sdlc-copilot-harness --yes \
   --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
   --workspace sdlc.code-workspace \
   --personal --personal-mode symlink \
-  --codegraph
+  --codegraph \
+  --caveman
 ```
 
 ### Uninstall
@@ -152,5 +154,5 @@ templates/          # PRD, analysis, review, workspace
 
 ## Attribution
 
-- Caveman skill vendored from [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
+- Core caveman chat skill adapted from [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman); optional pack via installer `--caveman`
 - CodeGraph: [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph)

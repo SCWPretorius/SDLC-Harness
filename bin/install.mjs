@@ -20,7 +20,8 @@
  *     --workspace sdlc.code-workspace \
  *     --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
  *     --personal --personal-mode symlink \
- *     --codegraph
+ *     --codegraph \
+ *     --caveman
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -50,6 +51,23 @@ const STATE_FILENAME = ".sdlc-copilot-harness.json";
 const LAST_INSTALL_DIR = path.join(os.homedir(), ".sdlc-copilot-harness");
 const LAST_INSTALL_FILE = path.join(LAST_INSTALL_DIR, "last-install.json");
 
+/** Optional pack from JuliusBrussee/caveman (excludes Cloud-only + core `caveman`). */
+const CAVEMAN_PACK_SKILLS = [
+  "cavecrew",
+  "caveman-commit",
+  "caveman-compress",
+  "caveman-explore",
+  "caveman-help",
+  "caveman-review",
+  "caveman-stats",
+  "investigate-first",
+  "lean-build",
+  "migration",
+  "safe-refactor",
+  "surgical-patch",
+  "verify-and-stop",
+];
+
 function parseArgs(argv) {
   const out = {
     yes: false,
@@ -60,12 +78,14 @@ function parseArgs(argv) {
     personal: null,
     personalMode: null,
     codegraph: null,
+    caveman: null,
     help: false,
     uninstall: false,
     keepPersonal: false,
     keepWorkspace: false,
     keepHarness: false,
     keepCodegraph: false,
+    keepCaveman: false,
     removeCodegraphCli: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -117,6 +137,12 @@ function parseArgs(argv) {
       case "--no-codegraph":
         out.codegraph = false;
         break;
+      case "--caveman":
+        out.caveman = true;
+        break;
+      case "--no-caveman":
+        out.caveman = false;
+        break;
       case "--keep-personal":
         out.keepPersonal = true;
         break;
@@ -128,6 +154,9 @@ function parseArgs(argv) {
         break;
       case "--keep-codegraph":
         out.keepCodegraph = true;
+        break;
+      case "--keep-caveman":
+        out.keepCaveman = true;
         break;
       case "--remove-codegraph-cli":
         out.removeCodegraphCli = true;
@@ -158,6 +187,9 @@ Install options:
   --codegraph / --no-codegraph
                            Install CodeGraph CLI (if needed), wire Copilot VS Code,
                            and run codegraph init in each selected product repo
+  --caveman / --no-caveman
+                           Vendor optional JuliusBrussee/caveman skill pack into the
+                           harness .github/skills (does not replace core caveman)
   -y, --yes                Non-interactive (install requires --parent)
   -h, --help
 
@@ -168,6 +200,7 @@ Uninstall options:
   --keep-workspace         Leave the .code-workspace file
   --keep-harness           Leave the harness folder
   --keep-codegraph         Leave CodeGraph indexes and Copilot wire
+  --keep-caveman           Leave optional caveman pack skills in the harness
   --remove-codegraph-cli   Also uninstall the CodeGraph CLI (only if this installer added it)
   -y, --yes                Non-interactive uninstall
 `);
@@ -323,6 +356,131 @@ function setupAndInitCodegraph({
   };
 }
 
+function copySkillTree(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (
+      entry.name === "node_modules" ||
+      entry.name === ".git" ||
+      entry.name === "agents" ||
+      entry.name === "tests"
+    ) {
+      continue;
+    }
+    if (entry.name === "package.json" && !entry.isDirectory()) continue;
+    const from = path.join(src, entry.name);
+    const to = path.join(dest, entry.name);
+    if (entry.isDirectory()) copySkillTree(from, to);
+    else fs.copyFileSync(from, to);
+  }
+}
+
+/**
+ * Sparse-clone JuliusBrussee/caveman and copy optional skills into the harness.
+ * Never overwrites the harness-customized `caveman` skill.
+ * Call before personal ~/.copilot install so symlinks pick up the pack.
+ */
+function setupCavemanSkills({ agentsRoot }) {
+  if (!commandExists("git")) {
+    throw new Error(
+      "git is required to install the caveman skill pack. Install git, or skip with --no-caveman.",
+    );
+  }
+
+  const lines = [];
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "sdlc-caveman-"));
+  const cloneDir = path.join(tmpRoot, "caveman");
+  const skillsDest = path.join(agentsRoot, ".github", "skills");
+  fs.mkdirSync(skillsDest, { recursive: true });
+
+  try {
+    const clone = spawnSync(
+      "git",
+      [
+        "clone",
+        "--depth",
+        "1",
+        "--filter=blob:none",
+        "--sparse",
+        "https://github.com/JuliusBrussee/caveman.git",
+        cloneDir,
+      ],
+      { stdio: "pipe", shell: process.platform === "win32" },
+    );
+    if (clone.status !== 0) {
+      throw new Error(
+        `Failed to clone JuliusBrussee/caveman: ${clone.stderr?.toString?.() || "unknown error"}`,
+      );
+    }
+
+    const sparse = spawnSync(
+      "git",
+      ["sparse-checkout", "set", "skills"],
+      { cwd: cloneDir, stdio: "pipe", shell: process.platform === "win32" },
+    );
+    if (sparse.status !== 0) {
+      throw new Error(
+        `Failed to sparse-checkout caveman skills: ${sparse.stderr?.toString?.() || "unknown error"}`,
+      );
+    }
+
+    const installed = [];
+    const harnessPaths = [];
+
+    for (const name of CAVEMAN_PACK_SKILLS) {
+      if (name === "caveman") continue;
+      const src = path.join(cloneDir, "skills", name);
+      if (!fs.existsSync(path.join(src, "SKILL.md"))) {
+        lines.push(`Skip: ${name} (no SKILL.md upstream)`);
+        continue;
+      }
+      const dest = path.join(skillsDest, name);
+      if (fs.existsSync(dest)) {
+        fs.rmSync(dest, { recursive: true, force: true });
+      }
+      copySkillTree(src, dest);
+      fs.writeFileSync(
+        path.join(dest, "ATTRIBUTION.md"),
+        `Source: https://github.com/JuliusBrussee/caveman (skills/${name})\nInstalled by sdlc-copilot-harness --caveman.\n`,
+        "utf8",
+      );
+      installed.push(name);
+      harnessPaths.push(dest);
+      lines.push(`Skill: ${name}`);
+    }
+
+    lines.unshift(
+      `Pack: JuliusBrussee/caveman → ${installed.length} skill${installed.length === 1 ? "" : "s"} (core caveman left as-is)`,
+    );
+
+    return {
+      lines,
+      skillNames: installed,
+      harnessPaths,
+    };
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+}
+
+function uninstallCavemanSkills(state) {
+  const lines = [];
+  const names = state.cavemanSkillNames || [];
+  const agentsRoot = state.agentsRoot;
+
+  for (const name of names) {
+    if (agentsRoot) {
+      const dest = path.join(agentsRoot, ".github", "skills", name);
+      if (removePath(dest)) lines.push(`removed harness skill ${name}`);
+    }
+    const personalDest = path.join(os.homedir(), ".copilot", "skills", name);
+    if (removePath(personalDest)) lines.push(`removed ~/.copilot/skills/${name}`);
+  }
+
+  if (lines.length === 0) lines.push("no caveman pack skills found");
+  return lines;
+}
+
 function isDirectory(p) {
   try {
     return fs.statSync(p).isDirectory();
@@ -470,6 +628,8 @@ function finish({
   personalLines,
   codegraph,
   codegraphLines,
+  caveman,
+  cavemanLines,
 }) {
   p.note(
     [
@@ -483,6 +643,9 @@ function finish({
       codegraph
         ? `CodeGraph:  set up (${(codegraphLines || []).filter((l) => l.startsWith("Init:")).length} repo inits)`
         : "CodeGraph:  skipped",
+      caveman
+        ? `Caveman:    pack installed (${(cavemanLines || []).filter((l) => l.startsWith("Skill:")).length} skills)`
+        : "Caveman:    pack skipped (core chat skill still in harness)",
     ].join("\n"),
     "Result",
   );
@@ -613,6 +776,13 @@ async function runInteractive(args) {
   });
   if (p.isCancel(codegraph)) return cancel();
 
+  const caveman = await p.confirm({
+    message:
+      "Install optional caveman skill pack? (commit/review/explore/workflow skills from JuliusBrussee/caveman — core caveman chat stays as-is)",
+    initialValue: args.caveman ?? true,
+  });
+  if (p.isCancel(caveman)) return cancel();
+
   return {
     parentDir,
     agentsName,
@@ -621,6 +791,7 @@ async function runInteractive(args) {
     personal,
     personalMode,
     codegraph,
+    caveman,
   };
 }
 
@@ -648,6 +819,7 @@ function runNonInteractive(args) {
     personal: args.personal ?? true,
     personalMode: args.personalMode || "symlink",
     codegraph: args.codegraph ?? false,
+    caveman: args.caveman ?? false,
   };
 }
 
@@ -936,6 +1108,12 @@ function defaultUninstallTargets(state, args) {
     if (state.codegraphInits?.length) selected.push("codegraph-indexes");
     if (state.codegraph || state.codegraphWire) selected.push("codegraph-wire");
   }
+  if (
+    !args.keepCaveman &&
+    (state.cavemanSkillNames?.length || state.caveman)
+  ) {
+    selected.push("caveman-pack");
+  }
   if (args.removeCodegraphCli && state.codegraphCliInstalledByUs) {
     selected.push("codegraph-cli");
   }
@@ -990,6 +1168,14 @@ function buildUninstallOptions(state) {
       value: "codegraph-cli",
       label: "Uninstall CodeGraph CLI (npm global)",
       hint: "this installer added it",
+    });
+  }
+  if (state.cavemanSkillNames?.length || state.caveman) {
+    const n = state.cavemanSkillNames?.length ?? 0;
+    options.push({
+      value: "caveman-pack",
+      label: `Remove optional caveman pack skills${n ? ` (${n})` : ""}`,
+      hint: "keeps core caveman chat skill",
     });
   }
   return options;
@@ -1047,6 +1233,7 @@ async function runUninstall(args) {
       `Workspace:  ${state.workspacePath || "not found"}`,
       `~/.copilot: ${state.personalPaths.length} item(s)`,
       `CodeGraph:  ${state.codegraphInits.length} index(es)${state.codegraphWire ? `, wire=${state.codegraphWire}` : ""}`,
+      `Caveman:    ${(state.cavemanSkillNames || []).length} optional pack skill(s)`,
     ].join("\n"),
     "Found",
   );
@@ -1107,6 +1294,11 @@ async function runUninstall(args) {
   if (selected.includes("codegraph-cli")) {
     report.push(...uninstallCodegraphCli().map((l) => `CodeGraph: ${l}`));
   }
+  if (selected.includes("caveman-pack")) {
+    report.push(
+      ...uninstallCavemanSkills(state).map((l) => `Caveman: ${l}`),
+    );
+  }
   if (selected.includes("workspace") && state.workspacePath) {
     report.push(
       removePath(state.workspacePath)
@@ -1163,6 +1355,18 @@ async function main() {
     workspaceDoc,
   );
 
+  let cavemanLines = [];
+  let cavemanSkillNames = [];
+  if (config.caveman) {
+    s.stop("Harness ready");
+    p.log.step("Installing optional caveman skill pack…");
+    const cavemanResult = setupCavemanSkills({ agentsRoot });
+    cavemanLines = cavemanResult.lines;
+    cavemanSkillNames = cavemanResult.skillNames;
+    p.note(cavemanLines.join("\n"), "Caveman");
+    s.start("Finishing install");
+  }
+
   let personalLines = [];
   let personalPaths = [];
   if (config.personal) {
@@ -1190,6 +1394,8 @@ async function main() {
     codegraphCliInstalledByUs: false,
     codegraphWire: null,
     codegraphInits: [],
+    caveman: config.caveman,
+    cavemanSkillNames,
   };
   writeInstallState(state);
 
@@ -1223,6 +1429,8 @@ async function main() {
     personalLines,
     codegraph: config.codegraph,
     codegraphLines,
+    caveman: config.caveman,
+    cavemanLines,
   });
 }
 
