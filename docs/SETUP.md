@@ -128,7 +128,7 @@ Symlinks (or copies) agents and skills into `~/.copilot/` for reuse outside this
 
 ## 7. Models
 
-Agents declare preferred models from [GitHub’s model comparison](https://docs.github.com/en/copilot/reference/ai-models/model-comparison). If a model is unavailable on your plan, Copilot falls back per the agent’s model list / picker.
+Agents declare one preferred model from [GitHub’s model comparison](https://docs.github.com/en/copilot/reference/ai-models/model-comparison) (see [README](../README.md) and [MODEL-IDS.md](MODEL-IDS.md)). If that model is unavailable on your plan, use the Copilot model picker.
 
 ## 8. Push harness to Azure DevOps
 

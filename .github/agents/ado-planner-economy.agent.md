@@ -5,7 +5,7 @@ description: MUST create Azure DevOps backlog when none exists. Converts PRD int
 
 argument-hint: Confirm Epic ID (or create-new) and point at the PRD…
 
-model: [gpt-5.6-terra, claude-sonnet-5]
+model: gpt-5.6-terra
 
 target: vscode
 

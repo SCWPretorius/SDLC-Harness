@@ -81,7 +81,7 @@ Two profiles ship side by side. Model fields use **slug IDs** (see [docs/MODEL-I
 
 ### Standard (quality)
 
-| Agent | Role | Model (primary) |
+| Agent | Role | Model |
 |-------|------|-----------------|
 | `sdlc-orchestrator` | Route phases, enforce process | `gpt-5.6-terra` |
 | `analyst` | Multi-repo analysis + docs | `gpt-5.6-sol` |
@@ -91,13 +91,13 @@ Two profiles ship side by side. Model fields use **slug IDs** (see [docs/MODEL-I
 | `implementer` | Vertical-slice .NET 10 implementation | `gpt-5.3-codex` |
 | `code-reviewer` | Review + findings doc → ADO bugs | `gpt-5.6-sol` |
 
-Fallbacks (including Sol/Opus/Fable where listed) are in each agent file.
+Each agent file sets only that model (no fallback list).
 
 ### Economy (lower credits)
 
 Same SDLC rules as standard — Epic gate, create backlog when missing, branching, caveman, CodeGraph — but cheaper models. Standard agents are **unchanged**.
 
-| Agent | Role | Model (primary) |
+| Agent | Role | Model |
 |-------|------|-----------------|
 | `sdlc-orchestrator-economy` | Route phases | `gpt-5.6-luna` |
 | `analyst-economy` | Multi-repo analysis + docs | `gpt-5.6-terra` |
@@ -115,7 +115,7 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 
 Escalate to standard agents only when you need full-quality analysis or review (large multi-repo ambiguity, security-critical review).
 
-Economy defaults avoid: `gpt-5.6-sol`, `gpt-5.5`, `claude-opus-4.8`, `claude-fable-5`.
+Economy defaults avoid: `gpt-5.6-sol`, `claude-opus-4.8`.
 
 Details: [docs/ECONOMY.md](docs/ECONOMY.md).
 

@@ -5,7 +5,7 @@ description: Implements vertical feature slices in C# .NET 10 on work-item branc
 
 argument-hint: Work item ID + acceptance criteria or PRD slice…
 
-model: [gpt-5.3-codex, claude-sonnet-5, claude-fable-5]
+model: gpt-5.3-codex
 
 target: vscode
 

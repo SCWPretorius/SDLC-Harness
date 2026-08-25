@@ -5,7 +5,7 @@ description: Fast Azure DevOps operations agent. Moves work item states, creates
 
 argument-hint: Work item ID + desired state or branch/PR action…
 
-model: [gpt-5.6-luna, claude-haiku-4.5, mai-code-1-flash]
+model: gpt-5.6-luna
 
 target: vscode
 

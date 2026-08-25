@@ -5,7 +5,7 @@ description: Reviews completed work, documents all bugs/snags, creates Azure Dev
 
 argument-hint: PR URL or work item ID to review…
 
-model: [gpt-5.6-sol, claude-opus-4.8, gemini-3.1-pro-preview]
+model: gpt-5.6-sol
 
 target: vscode
 

@@ -5,7 +5,7 @@ description: Multi-repo technical analyst. Uses CodeGraph, writes concise analys
 
 argument-hint: What should be analyzed across the repos?
 
-model: [gpt-5.6-sol, gpt-5.5, claude-opus-4.8]
+model: gpt-5.6-sol
 
 target: vscode
 

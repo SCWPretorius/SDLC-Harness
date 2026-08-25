@@ -5,7 +5,7 @@ description: STRICT router only. Must invoke specialist subagents. When no ADO w
 
 argument-hint: Describe the initiative — orchestrator will route to specialists…
 
-model: [gpt-5.6-terra, claude-sonnet-5]
+model: gpt-5.6-terra
 
 target: vscode
 

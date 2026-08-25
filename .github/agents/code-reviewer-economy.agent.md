@@ -5,7 +5,7 @@ description: Reviews completed work, documents all bugs/snags, creates Azure Dev
 
 argument-hint: PR URL or work item ID to review…
 
-model: [claude-sonnet-5, gpt-5.6-terra]
+model: claude-sonnet-5
 
 target: vscode
 

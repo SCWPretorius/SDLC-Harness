@@ -14,17 +14,19 @@ Escalate to standard agents only when user asks for full-quality (Sol/Opus) anal
 
 ## Models
 
-| Agent | Primary | Fallbacks |
-|-------|---------|-----------|
-| `sdlc-orchestrator-economy` | `gpt-5.6-luna` | `mai-code-1.1-flash` |
-| `analyst-economy` | `gpt-5.6-terra` | `claude-sonnet-5` |
-| `tech-pm-economy` | `claude-sonnet-5` | `gpt-5.6-terra` |
-| `ado-planner-economy` | `gpt-5.6-terra` | `claude-sonnet-5` |
-| `ado-ops-economy` | `gpt-5.6-luna` | `mai-code-1.1-flash`, `claude-haiku-4.5` |
-| `implementer-economy` | `gpt-5.3-codex` | `claude-sonnet-5` |
-| `code-reviewer-economy` | `claude-sonnet-5` | `gpt-5.6-terra` |
+Each economy agent file sets only the README model (no fallback list).
 
-Not used in economy defaults: `gpt-5.6-sol`, `gpt-5.5`, `claude-opus-4.8`, `claude-fable-5`.
+| Agent | Model |
+|-------|-------|
+| `sdlc-orchestrator-economy` | `gpt-5.6-luna` |
+| `analyst-economy` | `gpt-5.6-terra` |
+| `tech-pm-economy` | `claude-sonnet-5` |
+| `ado-planner-economy` | `gpt-5.6-terra` |
+| `ado-ops-economy` | `gpt-5.6-luna` |
+| `implementer-economy` | `gpt-5.3-codex` |
+| `code-reviewer-economy` | `claude-sonnet-5` |
+
+Not used in economy defaults: `gpt-5.6-sol`, `claude-opus-4.8`.
 
 ## Files
 

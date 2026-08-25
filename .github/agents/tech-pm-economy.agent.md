@@ -5,7 +5,7 @@ description: Technical project manager. Turns analysis into a concise PRD with v
 
 argument-hint: Point at the analysis report or paste findings…
 
-model: [claude-sonnet-5, gpt-5.6-terra]
+model: claude-sonnet-5
 
 target: vscode
 
