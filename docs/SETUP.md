@@ -39,6 +39,15 @@ node bin/install.mjs uninstall --yes --parent ~/dev
 
 Removes the workspace file, `~/.copilot` links/copies, CodeGraph indexes + Copilot wire, optional caveman pack skills, and the harness folder if this installer copied it. Product repos are left untouched. Use `--keep-harness`, `--keep-workspace`, `--keep-personal`, `--keep-codegraph`, or `--keep-caveman` to leave pieces in place.
 
+Update (refresh harness files when a newer package is available):
+
+```bash
+npx sdlc-copilot-harness update
+node bin/install.mjs update --yes --parent ~/dev
+```
+
+Compares the installed harness version to the running package (and npm `latest` when reachable). If behind, overwrites agents/skills/docs/scripts from this package, re-applies `~/.copilot` when personal install was used, and refreshes the caveman pack only if it was installed before. Does not rewrite the workspace file or re-init CodeGraph. Git checkouts of the harness should use `git pull` instead.
+
 Flags:
 
 | Flag | Meaning |
@@ -47,6 +56,7 @@ Flags:
 | `--no-codegraph` | Skip CodeGraph (default with `--yes` unless `--codegraph` is set) |
 | `--caveman` | Install optional JuliusBrussee/caveman skill pack into the harness `.github/skills` (does not replace the core `caveman` chat skill) |
 | `--no-caveman` | Skip caveman pack (default with `--yes` unless `--caveman` is set) |
+| `update` | Refresh an existing install’s harness files if outdated (see above) |
 | `uninstall` | Reverse an install (see above) |
 
 Layout after install:
