@@ -2,7 +2,7 @@
 
 Standalone Azure DevOps–oriented agent harness for GitHub Copilot in VS Code. Ships custom agents, skills, and instructions for a full SDLC loop:
 
-**Analysis → PRD → ADO work items → vertical-slice .NET implementation → code review → bug backlog → fix**
+**Analysis → chat PRD → ADO work items → vertical-slice .NET implementation → code review → ADO bugs → fix**
 
 Not for Cursor. Stack: Azure DevOps (`az` CLI), C# .NET 10, Azure platform, Agile process (`Epic → Feature → User Story → Task`).
 
@@ -85,11 +85,11 @@ Two profiles ship side by side. Model fields use **slug IDs** (see [docs/MODEL-I
 |-------|------|-----------------|
 | `sdlc-orchestrator` | Route phases, enforce process | `gpt-5.6-terra` |
 | `analyst` | Multi-repo analysis + docs | `gpt-5.6-sol` |
-| `tech-pm` | Findings → PRD | `claude-opus-4.8` |
-| `ado-planner` | PRD → Features / Stories / Tasks (asks for Epic first) | `claude-sonnet-5` |
+| `tech-pm` | Findings → short chat PRD (no file) | `claude-opus-4.8` |
+| `ado-planner` | Chat PRD → next-slice Feature / Story / Task (asks for Epic first) | `claude-sonnet-5` |
 | `ado-ops` | State moves, branch / PR linking | `gpt-5.6-luna` |
 | `implementer` | Vertical-slice .NET 10 implementation | `gpt-5.3-codex` |
-| `code-reviewer` | Review + findings doc → ADO bugs | `gpt-5.6-sol` |
+| `code-reviewer` | Review → ADO bugs (findings in descriptions) | `gpt-5.6-sol` |
 
 Each agent file sets only that model (no fallback list).
 
@@ -101,11 +101,11 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 |-------|------|-----------------|
 | `sdlc-orchestrator-economy` | Route phases | `gpt-5.6-luna` |
 | `analyst-economy` | Multi-repo analysis + docs | `gpt-5.6-terra` |
-| `tech-pm-economy` | Findings → PRD | `claude-sonnet-5` |
-| `ado-planner-economy` | PRD → Features / Stories / Tasks | `gpt-5.6-terra` |
+| `tech-pm-economy` | Findings → short chat PRD (no file) | `claude-sonnet-5` |
+| `ado-planner-economy` | Chat PRD → next-slice Feature / Story / Task | `gpt-5.6-terra` |
 | `ado-ops-economy` | States / branches / PR links | `gpt-5.6-luna` |
 | `implementer-economy` | Vertical-slice implementation | `gpt-5.3-codex` |
-| `code-reviewer-economy` | Review + findings → ADO bugs | `claude-sonnet-5` |
+| `code-reviewer-economy` | Review → ADO bugs (findings in descriptions) | `claude-sonnet-5` |
 
 **How to use economy mode**
 
@@ -134,12 +134,12 @@ templates/          # PRD, analysis, review, workspace
 
 ## Hard rules (all agents)
 
-1. Chat uses **caveman full** always (forced via always-on instructions + skill + every agent). Do not wait for `/caveman`. Persisted artifacts (PRD, tickets, commits, review docs) use normal English.
+1. Chat uses **caveman full** always (forced via always-on instructions + skill + every agent). Do not wait for `/caveman`. Persisted artifacts (analysis reports, ADO text, commits, PRs) use normal English. Do not write PRD or review markdown into the repo.
 2. Prefer **CodeGraph** before blind grep/search.
-3. Never create Features / User Stories / Tasks without a confirmed **Epic**. If no work items exist, **create** them before branch/code.
+3. Never create Features / User Stories / Tasks without a confirmed **Epic**. If no work items exist, **create the next slice** before branch/code. AC lives on the tickets; IDs in chat.
 4. Branching: `main` → `feature/<slug>` → `feature/<slug>/<id>-name` → PR → feature branch.
 5. Implementation follows **vertical feature slices** and clean C# practices.
-6. After implementation: review → document findings → create ADO items → fix with the same implementer loop.
+6. After implementation: review → file ADO bugs (findings in descriptions) → fix with the same implementer loop.
 7. All ADO mutations go through `az` CLI (or the scripts under `scripts/ado/`).
 
 ## Docs

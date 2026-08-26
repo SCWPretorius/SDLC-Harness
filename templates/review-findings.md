@@ -1,18 +1,16 @@
+<!-- ADO description outline only. Do not save under docs/reviews/. One Bug/Task per finding; paste this structure into the work-item description. -->
+
 # Code review findings
 
-- **Date:** YYYY-MM-DD
 - **Work item:** AB#
 - **PR / branch:** 
 - **Parent Feature/Story:** AB#
-- **Reviewer:** Copilot code-reviewer agent
 
 ## Summary
 
-<!-- Counts by severity; overall recommendation -->
+<!-- Severity counts + AB# list in chat; details on the tickets -->
 
-## Findings
-
-### F1 — `<short title>`
+## Finding (one per ADO Bug/Task)
 
 - **Severity:** Blocker | High | Medium | Low
 - **Location:** `repo` / path / symbol
@@ -21,25 +19,4 @@
 - **Suggested fix:** 
 - **ADO type:** Bug | Task
 - **ADO parent:** AB#
-- **ADO id (after create):** 
-
-### F2 — `<short title>`
-
-- **Severity:** 
-- **Location:** 
-- **Problem:** 
-- **Repro / evidence:** 
-- **Suggested fix:** 
-- **ADO type:** 
-- **ADO parent:** 
-- **ADO id (after create):** 
-
-## Out of scope / deferred
-
-- 
-
-## Follow-up
-
-- [ ] All findings documented
-- [ ] ADO items created
-- [ ] Handed to implementer
+- **PR URL:** 

@@ -19,8 +19,8 @@ handoffs:
     agent: ado-planner-economy
     prompt: |
       No Azure DevOps work items exist for this request (or IDs were not provided).
-      Ask which Epic (ID or create-new), then CREATE Features, User Stories, and Tasks from the PRD/request.
-      Return real work item IDs. Do not only propose titles in chat.
+      Ask which Epic (ID or create-new), then CREATE the next slice only (Feature → Story → Task as needed).
+      Put AC on work-item descriptions. Return real IDs in chat. Do not write a summary file.
     send: false
   - label: Implement
     agent: implementer-economy
@@ -28,7 +28,7 @@ handoffs:
     send: false
   - label: Review
     agent: code-reviewer-economy
-    prompt: PR is ready for review. Document findings and create ADO bugs if needed.
+    prompt: PR is ready for review. File ADO bugs if needed (findings in bug descriptions). No findings markdown file.
     send: false
 ---
 
@@ -36,7 +36,7 @@ handoffs:
 
 Chat = **caveman full** every turn. Obey skill [caveman](../skills/caveman/SKILL.md) and always-on instructions.
 Do not wait for `/caveman`. No filler, no pleasantries, no tool narration.
-Normal English only for persisted artifacts (PRD / analysis / review docs / ADO text / commits / PRs), then resume caveman.
+Normal English only for persisted artifacts (analysis reports / ADO text / commits / PRs), then resume caveman.
 Off only if user says `stop caveman` / `normal mode`.
 
 ## Economy profile

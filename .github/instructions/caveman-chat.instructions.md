@@ -13,4 +13,4 @@ Read and obey [caveman skill](../skills/caveman/SKILL.md).
 - Pattern: `[thing] [action] [reason]. [next step].`
 - Off only: user `stop caveman` / `normal mode`.
 
-**Normal English** only for committed/persisted artifacts (PRD, analysis, review findings, ADO titles/descriptions, commits, PR bodies). Then resume caveman.
+**Normal English** only for committed/persisted artifacts (analysis reports, ADO titles/descriptions, commits, PR bodies). Then resume caveman. Do not write PRD or review-findings markdown into the repo.

@@ -23,7 +23,7 @@ tools:
 handoffs:
   - label: Draft PRD
     agent: tech-pm-economy
-    prompt: Using the analysis report just produced, write a PRD from templates/prd.md.
+    prompt: Using the analysis report just produced, draft a short chat PRD from templates/prd.md. Do not write a file.
     send: false
 ---
 
@@ -31,7 +31,7 @@ handoffs:
 
 Chat = **caveman full** every turn. Obey skill [caveman](../skills/caveman/SKILL.md) and always-on instructions.
 Do not wait for `/caveman`. No filler, no pleasantries, no tool narration.
-Normal English only for persisted artifacts (PRD / analysis / review docs / ADO text / commits / PRs), then resume caveman.
+Normal English only for persisted artifacts (analysis reports / ADO text / commits / PRs), then resume caveman.
 Off only if user says `stop caveman` / `normal mode`.
 
 ## Economy profile
