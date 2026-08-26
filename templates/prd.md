@@ -1,3 +1,5 @@
+<!-- Chat / ADO outline only. Do not save this file under docs/. After confirm, AC lives on ADO work items. -->
+
 # Product requirements document (PRD)
 
 - **Date:** YYYY-MM-DD
@@ -8,45 +10,21 @@
 
 ## Problem / context
 
-## Goals
-
-- 
-
-## Non-goals
-
-- 
-
-## Stakeholders
-
-- 
+<!-- 3–5 lines -->
 
 ## Vertical slices
 
-### Slice 1 — `<name>`
+### Slice 1 — `<name>` (next)
 
-- **Value:** 
 - **Repos / systems:** 
 - **Acceptance criteria:**
   - [ ] 
-- **Notes:** 
 
-### Slice 2 — `<name>`
+### Slice 2 — `<name>` (later)
 
-- **Value:** 
 - **Repos / systems:** 
 - **Acceptance criteria:**
   - [ ] 
-- **Notes:** 
-
-## Risks
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| | | |
-
-## Open questions
-
-- 
 
 ## Out of scope
 

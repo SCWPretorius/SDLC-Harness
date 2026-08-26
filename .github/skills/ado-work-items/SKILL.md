@@ -3,10 +3,12 @@ name: ado-work-items
 description: >
   Create and update Azure DevOps Agile work items with az CLI: Epic, Feature,
   User Story, Task, Bug. Always ask which Epic before creating Features/Stories/Tasks.
-  Use for planning, backlog creation, hierarchy linking, and state updates.
+  Create the next slice only; return IDs in chat; never write a summary file.
 ---
 
 # Azure DevOps work items (`az`)
+
+ADO is the source of truth. List created IDs **in chat**. Never write a backlog summary under `docs/prd/`, `docs/analysis/`, or anywhere else in the repo.
 
 ## Defaults
 
@@ -31,16 +33,18 @@ Before creating Feature, User Story, or Task:
 
 If the user wants to build / branch / track work and **no** Feature / User Story / Task IDs exist:
 
-- Creating the hierarchy is **required**
+- Creating the **next slice** is **required** (full backlog only if the user asks)
 - Do not stop at proposing titles in chat
-- Run `az` or `./scripts/ado/create-hierarchy.sh` and return real IDs
+- Run `az` or `./scripts/ado/create-hierarchy.sh` and return real IDs **in chat**
 - `implementer` / `ado-ops` must wait for those IDs
 
 ## Hierarchy
 
 `Epic` → `Feature` → `User Story` → `Task`
 
-Review bugs: create `Bug` (or Task) under the relevant Feature / User Story.
+Default: create **the next slice only**. Other slices: title-only stubs on the Epic/Feature, or skip until asked.
+
+Review bugs: `code-reviewer` creates `Bug` (or Task) under the relevant Feature / User Story.
 
 ## Create helpers
 
@@ -84,13 +88,13 @@ az boards work-item relation add --id <CHILD_ID> --relation-type parent --target
 
 - Normal English (not caveman).
 - Titles concise and actionable.
-- Descriptions include acceptance criteria, repo touched, and PRD slice reference when available.
+- Descriptions are short: AC bullets, repo touched, slice name. No essay paste of the chat PRD.
 
 ## Mapping from PRD
 
-- Each vertical slice → one Feature (or Story if the slice is tiny).
+- Next slice → one Feature (or Story if the slice is tiny) + branch-sized Task.
+- Remaining slices: title-only stubs, or skip.
 - Stories stay thin and shippable.
-- Tasks are concrete engineering steps (one branch-sized unit when possible).
 
 ## Query
 

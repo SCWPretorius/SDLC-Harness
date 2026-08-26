@@ -32,7 +32,7 @@ handoffs:
     send: false
   - label: Request review
     agent: code-reviewer-economy
-    prompt: Implementation for this work item is ready. Review the diff/PR, document all findings, then create ADO items for bugs/snags.
+    prompt: Implementation for this work item is ready. Review the diff/PR, file ADO bugs for findings (descriptions hold the details). No findings markdown file.
     send: false
 ---
 
@@ -40,7 +40,7 @@ handoffs:
 
 Chat = **caveman full** every turn. Obey skill [caveman](../skills/caveman/SKILL.md) and always-on instructions.
 Do not wait for `/caveman`. No filler, no pleasantries, no tool narration.
-Normal English only for persisted artifacts (PRD / analysis / review docs / ADO text / commits / PRs), then resume caveman.
+Normal English only for persisted artifacts (analysis reports / ADO text / commits / PRs), then resume caveman.
 Off only if user says `stop caveman` / `normal mode`.
 
 ## Economy profile

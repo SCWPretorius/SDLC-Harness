@@ -6,15 +6,16 @@ End-to-end SDLC loop enforced by harness agents.
 Request
   → sdlc-orchestrator
   → analyst            (multi-repo analysis doc)
-  → tech-pm            (PRD)
-  → ado-planner        (ASK EPIC → Features / Stories / Tasks)
+  → tech-pm            (short chat PRD — no file)
+  → ado-planner        (ASK EPIC → next-slice Feature / Story / Task)
   → ado-ops            (states + branches)
   → implementer        (vertical slice on work-item branch)
-  → code-reviewer      (findings doc)
-  → ado-planner/ops    (bugs under parent)
+  → code-reviewer      (ADO bugs; findings in descriptions)
   → implementer        (fix loop)
   → merge PR to feature branch
 ```
+
+ADO is the source of truth for PRD slices, AC, and review findings. Do not write `docs/prd/` or `docs/reviews/`.
 
 ## Phase details
 
@@ -29,14 +30,15 @@ No product code edits.
 
 Agent: `tech-pm`  
 Skill: `prd-authoring`  
-Output: `docs/prd/<date>-<slug>.md`  
+Output: short PRD **in chat** (problem, slices + AC, suggested Epic). No repo file.  
 Human confirms before backlog.
 
 ### 3. Backlog
 
 Agent: `ado-planner`  
 **Must ask Epic first.**  
-If no work items exist for the request, **creating them is mandatory** (Epic if needed → Features → Stories → Tasks via `az` / `scripts/ado/create-hierarchy.sh`).  
+If no work items exist for the request, **creating the next slice is mandatory** (Epic if needed → Feature → Story → Task via `az` / `scripts/ado/create-hierarchy.sh`).  
+Put AC on work-item descriptions. List IDs in chat. Do not write a summary file.  
 Do not proceed to branch/implement without real ADO IDs.
 
 ### 4. Activate + branch
@@ -52,12 +54,12 @@ Vertical .NET 10 slice; clean code; CodeGraph; PR into **feature** branch.
 ### 6. Review + defects
 
 Agent: `code-reviewer`  
-Write full findings first, then create Bugs/Tasks, then fix with implementer using the same rules.
+File ADO Bugs/Tasks under the parent (descriptions hold findings). Chat: severity counts + AB# list. Then fix with implementer using the same rules.
 
 ## Human gates
 
 - Epic selection before any Feature/Story/Task create
-- PRD confirmation before backlog (recommended)
+- Chat PRD confirmation before backlog (recommended)
 - Handoff buttons on the orchestrator use `send: false` so a human can start each phase
 
 ## Orchestrator behavior

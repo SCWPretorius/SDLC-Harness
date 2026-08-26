@@ -1,8 +1,8 @@
 ---
 name: prd-authoring
 description: >
-  Convert analysis findings into a concise technical PRD with vertical slices,
-  acceptance criteria, risks, and repos touched. Use after analysis, before ADO planning.
+  Convert analysis findings into a concise chat PRD with vertical slices and
+  acceptance criteria. Do not write a repo file. Use after analysis, before ADO planning.
 ---
 
 # PRD authoring
@@ -14,18 +14,16 @@ description: >
 
 ## Output
 
-Create/update a PRD from `templates/prd.md`. Save as `docs/prd/<yyyy-mm-dd>-<slug>.md` (or path user specifies).
+Draft a short PRD **in chat** from `templates/prd.md`. **Do not write `docs/prd/` or any PRD markdown into the repo.** Azure DevOps is the source of truth after confirm.
 
-## Required sections
+Keep it short:
 
-1. Problem / context
-2. Goals and non-goals
-3. Users / stakeholders (short)
-4. Vertical slices (each slice independently valuable)
-5. Acceptance criteria per slice
-6. Repos and systems touched
-7. Risks / open questions
-8. Out of scope
+- Problem / context (3–5 lines)
+- Vertical slices with acceptance criteria checkboxes
+- Suggested Epic (ID or create-new title)
+- Repos touched (one line per slice)
+
+Skip stakeholders, risks tables, and long non-goals unless the user asks.
 
 ## Style
 
@@ -36,4 +34,4 @@ Create/update a PRD from `templates/prd.md`. Save as `docs/prd/<yyyy-mm-dd>-<slu
 
 ## Gate for next phase
 
-PRD must be reviewable by a human before `ado-planner` creates work items. Ask user to confirm PRD (or note explicit "proceed") before backlog creation.
+PRD must be reviewable by a human in chat before `ado-planner` creates work items. Ask user to confirm (or note explicit "proceed") before backlog creation. After confirm, pass slices + AC to `ado-planner` — AC lives on ADO work-item descriptions, not a file.
