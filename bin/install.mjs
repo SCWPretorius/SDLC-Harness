@@ -13,6 +13,10 @@
  *   npx sdlc-copilot-harness uninstall
  *   npx sdlc-copilot-harness uninstall --yes --parent ~/dev
  *
+ * Update (refresh harness files from this package):
+ *   npx sdlc-copilot-harness update
+ *   npx sdlc-copilot-harness update --yes --parent ~/dev
+ *
  * Non-interactive install:
  *   npx sdlc-copilot-harness --yes \
  *     --parent ~/dev \
@@ -81,6 +85,7 @@ function parseArgs(argv) {
     caveman: null,
     help: false,
     uninstall: false,
+    update: false,
     keepPersonal: false,
     keepWorkspace: false,
     keepHarness: false,
@@ -91,8 +96,9 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i];
-    if (i === 0 && (a === "uninstall" || a === "install")) {
+    if (i === 0 && (a === "uninstall" || a === "install" || a === "update")) {
       if (a === "uninstall") out.uninstall = true;
+      if (a === "update") out.update = true;
       continue;
     }
     switch (a) {
@@ -106,6 +112,9 @@ function parseArgs(argv) {
         break;
       case "--uninstall":
         out.uninstall = true;
+        break;
+      case "--update":
+        out.update = true;
         break;
       case "--parent":
         out.parent = next();
@@ -174,6 +183,8 @@ function printHelp() {
   console.log(`Usage:
   npx sdlc-copilot-harness
   npx sdlc-copilot-harness --yes --parent <dir> [--folders A,B,C]
+  npx sdlc-copilot-harness update
+  npx sdlc-copilot-harness update --yes --parent <dir>
   npx sdlc-copilot-harness uninstall
   npx sdlc-copilot-harness uninstall --yes --parent <dir>
 
@@ -192,6 +203,11 @@ Install options:
                            harness .github/skills (does not replace core caveman)
   -y, --yes                Non-interactive (install requires --parent)
   -h, --help
+
+Update options:
+  update, --update         Refresh harness files from this package if outdated
+  --parent <dir>           Parent folder used at install (or last-install is used)
+  -y, --yes                Non-interactive update
 
 Uninstall options:
   uninstall, --uninstall   Remove what this installer created
@@ -840,6 +856,61 @@ function readJsonFile(file) {
   }
 }
 
+function readPackageVersion(root) {
+  const pkg = readJsonFile(path.join(root, "package.json"));
+  return typeof pkg?.version === "string" ? pkg.version : null;
+}
+
+function getRunningPackageVersion() {
+  return readPackageVersion(PACKAGE_ROOT) || "0.0.0";
+}
+
+/** Compare dotted numeric versions (e.g. 1.0.2). Returns -1 / 0 / 1. */
+function compareVersions(a, b) {
+  const pa = String(a || "0")
+    .split(".")
+    .map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || "0")
+    .split(".")
+    .map((n) => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x < y) return -1;
+    if (x > y) return 1;
+  }
+  return 0;
+}
+
+function fetchNpmLatestVersion(packageName = "sdlc-copilot-harness") {
+  if (!commandExists("npm")) return null;
+  try {
+    const result = spawnSync(
+      "npm",
+      ["view", packageName, "version", "--silent"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: process.platform === "win32",
+        timeout: 15000,
+      },
+    );
+    if (result.status !== 0) return null;
+    const v = (result.stdout || "").trim();
+    return v || null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveInstalledVersion(agentsRoot, state) {
+  return (
+    readPackageVersion(agentsRoot) ||
+    (typeof state?.packageVersion === "string" ? state.packageVersion : null)
+  );
+}
+
 function looksLikeHarness(dir) {
   return fs.existsSync(
     path.join(dir, ".github", "agents", "sdlc-orchestrator.agent.md"),
@@ -1322,10 +1393,170 @@ async function runUninstall(args) {
   p.outro(c.green("Done. Restart VS Code / Copilot if it was open."));
 }
 
+function refreshHarnessFromPackage(agentsRoot) {
+  copyDir(PACKAGE_ROOT, agentsRoot);
+  for (const junk of ["node_modules", "package-lock.json"]) {
+    const j = path.join(agentsRoot, junk);
+    if (fs.existsSync(j)) fs.rmSync(j, { recursive: true, force: true });
+  }
+}
+
+async function runUpdate(args) {
+  console.log();
+  p.intro(c.bgCyan(c.black(" sdlc-copilot-harness update ")));
+
+  const last = loadInstallState(
+    args.parent ? resolveUserPath(args.parent) : null,
+  );
+  const defaultParent = args.parent
+    ? resolveUserPath(args.parent)
+    : last?.parentDir || process.cwd();
+
+  let parentDir = defaultParent;
+  if (!args.yes) {
+    const parentDirRaw = await p.text({
+      message: "Parent folder used when installing",
+      placeholder: defaultParent,
+      initialValue: defaultParent,
+      validate(value) {
+        const resolved = resolveUserPath(value?.trim() || defaultParent);
+        if (!isDirectory(resolved)) return `Not a directory: ${resolved}`;
+        return undefined;
+      },
+    });
+    if (p.isCancel(parentDirRaw)) return cancel("Update cancelled.");
+    parentDir = resolveUserPath(parentDirRaw.trim() || defaultParent);
+  } else if (!isDirectory(parentDir)) {
+    throw new Error(`Not a directory: ${parentDir}`);
+  }
+
+  const discovered = discoverInstall(parentDir);
+  const saved = loadInstallState(parentDir);
+  const state = {
+    ...discovered,
+    ...(saved || {}),
+    parentDir,
+    agentsRoot:
+      saved?.agentsRoot ||
+      discovered.agentsRoot ||
+      path.join(parentDir, saved?.agentsName || discovered.agentsName || "SDLC Harness"),
+    agentsName:
+      saved?.agentsName || discovered.agentsName || "SDLC Harness",
+  };
+
+  if (!looksLikeHarness(state.agentsRoot)) {
+    throw new Error(
+      `No harness found at ${state.agentsRoot}. Run install first, or pass --parent.`,
+    );
+  }
+
+  if (path.resolve(state.agentsRoot) === path.resolve(PACKAGE_ROOT)) {
+    p.outro(
+      "This folder is the package itself (current checkout). Already running these files — nothing to refresh. Use git pull if you need upstream changes.",
+    );
+    return;
+  }
+
+  const harnessAction =
+    state.harnessAction || inferHarnessAction(state.agentsRoot);
+  const isGitCheckout = pathExists(path.join(state.agentsRoot, ".git"));
+  if (harnessAction === "existing" && isGitCheckout) {
+    throw new Error(
+      `Harness at ${state.agentsRoot} is a git checkout. Update with git pull instead of this command.`,
+    );
+  }
+
+  const runningVersion = getRunningPackageVersion();
+  const installedVersion = resolveInstalledVersion(state.agentsRoot, state);
+  const npmLatest = fetchNpmLatestVersion();
+
+  const versionLines = [
+    `Installed:  ${installedVersion || "(unknown)"}`,
+    `Running:    ${runningVersion}`,
+    npmLatest
+      ? `npm latest: ${npmLatest}`
+      : "npm latest: (unavailable)",
+    `Harness:    ${state.agentsRoot}`,
+  ];
+  p.note(versionLines.join("\n"), "Versions");
+
+  if (npmLatest && compareVersions(runningVersion, npmLatest) < 0) {
+    p.log.warn(
+      `A newer package is on npm (${npmLatest}). Re-run via npx sdlc-copilot-harness update so this updater is current, then refresh again.`,
+    );
+  }
+
+  if (
+    installedVersion &&
+    compareVersions(installedVersion, runningVersion) >= 0
+  ) {
+    p.outro(
+      c.green(
+        `Already up to date (${installedVersion}). Workspace and CodeGraph left as-is.`,
+      ),
+    );
+    return;
+  }
+
+  if (!args.yes) {
+    const ok = await p.confirm({
+      message: `Refresh harness ${installedVersion || "unknown"} → ${runningVersion}? Keeps workspace and CodeGraph.`,
+      initialValue: true,
+    });
+    if (p.isCancel(ok) || !ok) return cancel("Update cancelled.");
+  }
+
+  const s = p.spinner();
+  s.start("Refreshing harness files");
+  refreshHarnessFromPackage(state.agentsRoot);
+  s.stop(`Harness refreshed → ${runningVersion}`);
+
+  const report = [
+    `Harness: ${installedVersion || "unknown"} → ${runningVersion}`,
+  ];
+
+  if (state.caveman || state.cavemanSkillNames?.length) {
+    p.log.step("Refreshing optional caveman skill pack…");
+    const cavemanResult = setupCavemanSkills({ agentsRoot: state.agentsRoot });
+    state.caveman = true;
+    state.cavemanSkillNames = cavemanResult.skillNames;
+    report.push(
+      `Caveman: refreshed ${cavemanResult.skillNames.length} pack skill(s)`,
+    );
+    p.note(cavemanResult.lines.join("\n"), "Caveman");
+  }
+
+  if (state.personal) {
+    const mode = state.personalMode || "symlink";
+    const personal = installPersonalCopilot(state.agentsRoot, mode);
+    state.personalPaths = personal.paths;
+    state.personalMode = mode;
+    report.push(
+      `~/.copilot: re-applied ${personal.paths.length} item(s) (${mode})`,
+    );
+  }
+
+  state.packageVersion = runningVersion;
+  state.updatedAt = new Date().toISOString();
+  state.harnessAction = "copied";
+  writeInstallState(state);
+
+  p.note(report.join("\n"), "Updated");
+  p.outro(
+    c.green(
+      "Done. Restart VS Code / Copilot if agents were open. Workspace and CodeGraph were left as-is.",
+    ),
+  );
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     printHelp();
+    return;
+  }
+  if (args.update) {
+    await runUpdate(args);
     return;
   }
   if (args.uninstall) {
@@ -1380,6 +1611,7 @@ async function main() {
   const state = {
     version: 1,
     installedAt: new Date().toISOString(),
+    packageVersion: getRunningPackageVersion(),
     parentDir: config.parentDir,
     agentsName: config.agentsName,
     agentsRoot,

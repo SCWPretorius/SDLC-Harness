@@ -53,6 +53,18 @@ Removes the generated workspace file, `~/.copilot` agents/skills this installer 
 npx sdlc-copilot-harness uninstall --yes --parent ~/dev
 ```
 
+### Update
+
+```bash
+npx sdlc-copilot-harness update
+```
+
+Checks the installed harness version against the package you are running (and npm `latest` when available). If outdated, refreshes agents/skills/docs/scripts in place, re-applies `~/.copilot` when personal install was used, and refreshes the caveman pack only if it was installed before. Workspace file and CodeGraph indexes are left alone. Non-interactive:
+
+```bash
+npx sdlc-copilot-harness update --yes --parent ~/dev
+```
+
 Until published to npm, run from this repo:
 
 ```bash
