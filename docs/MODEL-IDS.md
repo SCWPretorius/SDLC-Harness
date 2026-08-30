@@ -56,3 +56,27 @@ See [ECONOMY.md](ECONOMY.md). Separate `*-economy` agents; standard agents uncha
 - Prefer kebab-case slugs from the Copilot model catalog / CLI (`~/.copilot` / picker autocomplete).
 - VS Code may also accept display names in some builds; slugs work for Copilot CLI and avoid mismatches.
 - If a slug fails in your tenant, open the model picker autocomplete in an agent file and pick the offered ID.
+
+## OpenCode
+
+Generated `.opencode/agents/*.md` files **omit** `model`. OpenCode uses `provider/model-id` (for example `anthropic/claude-sonnet-4-5` or `opencode/gpt-5.1-codex`), which is not compatible with Copilot slugs.
+
+Set the session model with `/models`, or pin a default in `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-5"
+}
+```
+
+Optional starting points if you want to pin per-agent later (edit generated files only if you stop using `bin/sync-opencode-agents.mjs`, or re-apply after sync):
+
+| Copilot slug | Suggested OpenCode id (depends on provider) |
+|--------------|-----------------------------------------------|
+| `gpt-5.6-terra` / `gpt-5.6-sol` / `gpt-5.6-luna` | `openai/gpt-5.2` or OpenCode Zen equivalent |
+| `gpt-5.3-codex` | `openai/gpt-5.1-codex` or `opencode/gpt-5.1-codex` |
+| `claude-opus-4.8` | `anthropic/claude-opus-4-5` |
+| `claude-sonnet-5` | `anthropic/claude-sonnet-4-5` |
+
+Economy in OpenCode is still the `*-economy` agents (Tab to `sdlc-orchestrator-economy`). Pick a cheaper model in `/models` if you want extra savings on top of the cheaper Copilot mapping.

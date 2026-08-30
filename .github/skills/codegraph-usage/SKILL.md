@@ -13,9 +13,9 @@ Prefer CodeGraph over blind file crawling. Fewer tool calls, surgical context.
 ## Prerequisites
 
 1. CLI installed: `curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh` or `npm i -g @colbymchenry/codegraph`
-2. Agent wiring: `codegraph install --target=copilot-vscode --yes`
+2. Agent wiring: `codegraph install --target=copilot-vscode --yes` and/or `codegraph install --target=opencode --yes` (installer uses both when both runtimes are selected)
 3. Per product repo: `cd <repo> && codegraph init`
-4. Restart VS Code / Copilot after install
+4. Restart VS Code / Copilot and OpenCode after install
 
 Confirm `.codegraph/` exists in each product folder before deep analysis. If missing, run `codegraph init` (ask user if unsure about side effects).
 

@@ -1,10 +1,12 @@
-# SDLC Harness (GitHub Copilot / VS Code)
+# SDLC Harness (GitHub Copilot / VS Code + OpenCode)
 
-Standalone Azure DevOps–oriented agent harness for GitHub Copilot in VS Code. Ships custom agents, skills, and instructions for a full SDLC loop:
+Standalone Azure DevOps–oriented agent harness for **GitHub Copilot in VS Code** and **[OpenCode](https://opencode.ai)**. Ships custom agents, skills, and instructions for a full SDLC loop:
 
 **Analysis → chat PRD → ADO work items → vertical-slice .NET implementation → code review → ADO bugs → fix**
 
 Not for Cursor. Stack: Azure DevOps (`az` CLI), C# .NET 10, Azure platform, Agile process (`Epic → Feature → User Story → Task`).
+
+Copilot agents in `.github/agents/` are the source of truth. OpenCode agents in `.opencode/agents/` are generated (`node bin/sync-opencode-agents.mjs`).
 
 ## Quick start
 
@@ -20,13 +22,17 @@ The installer asks for:
 
 1. **Parent folder** — directory that holds sibling product repos  
 2. **Harness folder name** — default `SDLC Harness` (created/copied if missing)  
-3. **Which sibling folders** to put in the multi-root workspace  
-4. **Workspace file name** — default `sdlc.code-workspace` (written into the parent)  
-5. Optional **~/.copilot** personal install (symlink or copy)  
-6. Optional **CodeGraph** — install CLI if needed, wire Copilot VS Code, `codegraph init` in each selected product repo (harness folder skipped)  
-7. Optional **caveman pack** — install JuliusBrussee/caveman skill siblings into the harness (core chat skill already included)
+3. **Which sibling folders** to put in the workspace  
+4. **Runtimes** — GitHub Copilot (VS Code), OpenCode, or both  
+5. **Workspace file name** — default `sdlc.code-workspace` (Copilot; written into the parent)  
+6. Optional **personal install** — `~/.copilot` and/or `~/.config/opencode` (symlink or copy)  
+7. Optional **CodeGraph** — install CLI if needed, wire selected runtimes, `codegraph init` in each selected product repo (harness folder skipped)  
+8. Optional **caveman pack** — install JuliusBrussee/caveman skill siblings into the harness (core chat skill already included)
 
-Then open the generated `.code-workspace` in VS Code.
+Then:
+
+- **Copilot:** open the generated `.code-workspace` in VS Code  
+- **OpenCode:** `cd` to the **parent folder** and run `opencode`, then Tab to `sdlc-orchestrator`
 
 Non-interactive example:
 
@@ -37,9 +43,12 @@ npx sdlc-copilot-harness --yes \
   --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
   --workspace sdlc.code-workspace \
   --personal --personal-mode symlink \
+  --opencode \
   --codegraph \
   --caveman
 ```
+
+`--yes` without `--opencode` stays Copilot-only (backward compatible). Interactive install defaults to both runtimes.
 
 ### Uninstall
 
@@ -47,7 +56,7 @@ npx sdlc-copilot-harness --yes \
 npx sdlc-copilot-harness uninstall
 ```
 
-Removes the generated workspace file, `~/.copilot` agents/skills this installer added, CodeGraph indexes it created (and Copilot wiring), and the copied harness folder. Product repos are never deleted. Non-interactive:
+Removes the generated workspace file, parent `opencode.json` / `.opencode` (if this installer wrote them), `~/.copilot` and `~/.config/opencode` agents/skills this installer added, CodeGraph indexes it created (and Copilot/OpenCode wiring), and the copied harness folder. Product repos are never deleted. Non-interactive:
 
 ```bash
 npx sdlc-copilot-harness uninstall --yes --parent ~/dev
@@ -59,7 +68,7 @@ npx sdlc-copilot-harness uninstall --yes --parent ~/dev
 npx sdlc-copilot-harness update
 ```
 
-Checks the installed harness version against the package you are running (and npm `latest` when available). If outdated, refreshes agents/skills/docs/scripts in place, re-applies `~/.copilot` when personal install was used, and refreshes the caveman pack only if it was installed before. Workspace file and CodeGraph indexes are left alone. Non-interactive:
+Checks the installed harness version against the package you are running (and npm `latest` when available). If outdated, refreshes agents/skills/docs/scripts in place (including generated OpenCode agents), re-applies `~/.copilot` / `~/.config/opencode` when personal install was used, and refreshes the caveman pack only if it was installed before. Workspace file and CodeGraph indexes are left alone. Non-interactive:
 
 ```bash
 npx sdlc-copilot-harness update --yes --parent ~/dev
@@ -82,14 +91,17 @@ This repo lives as a **sibling** of product repos.
 2. Install prerequisites (see [docs/SETUP.md](docs/SETUP.md)):
    - Azure CLI + `azure-devops` extension
    - CodeGraph (use the installer’s **CodeGraph** option, or set up manually)
-3. Optional: `./scripts/install-copilot-harness.sh`
+3. Optional: `./scripts/install-copilot-harness.sh` and/or `./scripts/install-opencode-harness.sh`
 4. In Copilot Chat:
    - **Quality:** `sdlc-orchestrator`
    - **Economy (lower credits):** `sdlc-orchestrator-economy`
+5. In OpenCode (from the parent folder):
+   - Tab to **`sdlc-orchestrator`** or **`sdlc-orchestrator-economy`**
+   - Specialists are subagents (`@analyst`, Task tool). Wait for the user between phases.
 
 ## Agents and models
 
-Two profiles ship side by side. Model fields use **slug IDs** (see [docs/MODEL-IDS.md](docs/MODEL-IDS.md)). Availability depends on your Copilot plan.
+Two profiles ship side by side. Copilot model fields use **slug IDs** (see [docs/MODEL-IDS.md](docs/MODEL-IDS.md)). Availability depends on your Copilot plan. OpenCode agents **omit** `model` so your connected provider (`/models`) applies.
 
 ### Standard (quality)
 
@@ -121,9 +133,17 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 
 **How to use economy mode**
 
+**Copilot**
+
 1. Open the multi-root workspace.
 2. In Copilot Chat, pick **`sdlc-orchestrator-economy`** (not `sdlc-orchestrator`).
 3. Stay on `*-economy` handoffs for the whole flow — do not mix with standard Sol/Opus agents mid-run.
+
+**OpenCode**
+
+1. `cd` to the parent folder and run `opencode`.
+2. Tab to **`sdlc-orchestrator-economy`**.
+3. Stay on `*-economy` Task / `@` targets for the whole flow.
 
 Escalate to standard agents only when you need full-quality analysis or review (large multi-repo ambiguity, security-critical review).
 
@@ -136,12 +156,22 @@ Details: [docs/ECONOMY.md](docs/ECONOMY.md).
 ```
 .github/
   copilot-instructions.md
-  agents/           # *.agent.md personas + handoffs
+  agents/           # Copilot *.agent.md personas + handoffs (source of truth)
   skills/           # on-demand SKILL.md packages (incl. caveman, CodeGraph, ADO)
   instructions/     # path-scoped Copilot instructions
+.opencode/
+  opencode.json     # default agent, instructions, skills (when CWD is the harness)
+  agents/           # generated OpenCode *.md (do not hand-edit)
+AGENTS.md           # OpenCode always-on rules
 docs/               # SETUP, WORKFLOW, ADO-STATES, BRANCHING
 scripts/            # install + az helpers
 templates/          # PRD, analysis, review, workspace
+```
+
+After editing Copilot agents, regenerate OpenCode files:
+
+```bash
+node bin/sync-opencode-agents.mjs
 ```
 
 ## Hard rules (all agents)
@@ -156,10 +186,10 @@ templates/          # PRD, analysis, review, workspace
 
 ## Docs
 
-- [SETUP.md](docs/SETUP.md) — install CodeGraph, az, workspace
+- [SETUP.md](docs/SETUP.md) — install CodeGraph, az, Copilot workspace, OpenCode
 - [PUBLISH.md](docs/PUBLISH.md) — publish package for `npx sdlc-copilot-harness`
 - [ECONOMY.md](docs/ECONOMY.md) — credit-saving `*-economy` agents
-- [MODEL-IDS.md](docs/MODEL-IDS.md) — Copilot model slug IDs for agent frontmatter
+- [MODEL-IDS.md](docs/MODEL-IDS.md) — Copilot slugs and OpenCode model notes
 - [WORKFLOW.md](docs/WORKFLOW.md) — end-to-end SDLC phases
 - [ADO-STATES.md](docs/ADO-STATES.md) — Agile state machine
 - [BRANCHING.md](docs/BRANCHING.md) — branch and PR rules
