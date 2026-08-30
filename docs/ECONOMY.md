@@ -6,15 +6,23 @@ Use when you want lower AI-credit spend. Same SDLC rules (Epic gate, create back
 
 ## How to use
 
+**Copilot**
+
 1. Open multi-root workspace as usual.
 2. In Copilot Chat agents picker, choose **`sdlc-orchestrator-economy`** (not `sdlc-orchestrator`).
 3. Stay on `*-economy` handoffs for the whole flow.
+
+**OpenCode**
+
+1. `cd` to the parent folder and run `opencode`.
+2. Tab to **`sdlc-orchestrator-economy`**.
+3. Stay on `*-economy` Task / `@` targets for the whole flow.
 
 Escalate to standard agents only when user asks for full-quality (Sol/Opus) analysis or review.
 
 ## Models
 
-Each economy agent file sets only the README model (no fallback list).
+Each Copilot economy agent file sets only the README model (no fallback list). OpenCode economy agents inherit the user’s `/models` default (no Copilot slugs).
 
 | Agent | Model |
 |-------|-------|
@@ -30,4 +38,5 @@ Not used in economy defaults: `gpt-5.6-sol`, `claude-opus-4.8`.
 
 ## Files
 
-`.github/agents/*-economy.agent.md`
+`.github/agents/*-economy.agent.md` (source)  
+`.opencode/agents/*-economy.md` (generated)

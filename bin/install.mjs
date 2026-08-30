@@ -5,9 +5,10 @@
  * Interactive installer:
  * - asks for parent folder that holds sibling product repos
  * - copies/updates the SDLC Harness into that folder
- * - detects sibling directories and builds sdlc.code-workspace
- * - optionally links agents/skills into ~/.copilot
- * - optionally installs CodeGraph CLI, wires Copilot VS Code, inits each product repo
+ * - detects sibling directories and builds sdlc.code-workspace (Copilot)
+ * - optionally writes parent opencode.json + .opencode/agents (OpenCode)
+ * - optionally links agents/skills into ~/.copilot and/or ~/.config/opencode
+ * - optionally installs CodeGraph CLI, wires Copilot and/or OpenCode, inits each product repo
  *
  * Uninstall (reverses the above):
  *   npx sdlc-copilot-harness uninstall
@@ -24,6 +25,7 @@
  *     --workspace sdlc.code-workspace \
  *     --folders "SDLC Harness,Contoso.Api,Fabrikam.Web" \
  *     --personal --personal-mode symlink \
+ *     --opencode \
  *     --codegraph \
  *     --caveman
  */
@@ -34,6 +36,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as p from "@clack/prompts";
 import c from "picocolors";
+import { syncOpencodeAgents } from "./sync-opencode-agents.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,6 +86,8 @@ function parseArgs(argv) {
     personalMode: null,
     codegraph: null,
     caveman: null,
+    copilot: null,
+    opencode: null,
     help: false,
     uninstall: false,
     update: false,
@@ -91,6 +96,7 @@ function parseArgs(argv) {
     keepHarness: false,
     keepCodegraph: false,
     keepCaveman: false,
+    keepOpencode: false,
     removeCodegraphCli: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -152,6 +158,21 @@ function parseArgs(argv) {
       case "--no-caveman":
         out.caveman = false;
         break;
+      case "--copilot":
+        out.copilot = true;
+        break;
+      case "--no-copilot":
+        out.copilot = false;
+        break;
+      case "--opencode":
+        out.opencode = true;
+        break;
+      case "--no-opencode":
+        out.opencode = false;
+        break;
+      case "--keep-opencode":
+        out.keepOpencode = true;
+        break;
       case "--keep-personal":
         out.keepPersonal = true;
         break;
@@ -195,8 +216,12 @@ Install options:
   --folders <a,b,c>        Folders to include (comma-separated)
   --personal / --no-personal
   --personal-mode symlink|copy
+  --copilot / --no-copilot
+                           GitHub Copilot (VS Code) runtime. Default on with --yes
+  --opencode / --no-opencode
+                           OpenCode runtime (parent opencode.json). Default off with --yes
   --codegraph / --no-codegraph
-                           Install CodeGraph CLI (if needed), wire Copilot VS Code,
+                           Install CodeGraph CLI (if needed), wire selected runtimes,
                            and run codegraph init in each selected product repo
   --caveman / --no-caveman
                            Vendor optional JuliusBrussee/caveman skill pack into the
@@ -215,8 +240,9 @@ Uninstall options:
   --keep-personal          Leave ~/.copilot agents/skills in place
   --keep-workspace         Leave the .code-workspace file
   --keep-harness           Leave the harness folder
-  --keep-codegraph         Leave CodeGraph indexes and Copilot wire
+  --keep-codegraph         Leave CodeGraph indexes and Copilot/OpenCode wire
   --keep-caveman           Leave optional caveman pack skills in the harness
+  --keep-opencode          Leave parent opencode.json / .opencode and ~/.config/opencode
   --remove-codegraph-cli   Also uninstall the CodeGraph CLI (only if this installer added it)
   -y, --yes                Non-interactive uninstall
 `);
@@ -294,10 +320,18 @@ function runCodegraph(runner, args, opts = {}) {
   };
 }
 
+function codegraphWireTarget({ copilot, opencode }) {
+  if (copilot && opencode) return "copilot-vscode,opencode";
+  if (opencode) return "opencode";
+  return "copilot-vscode";
+}
+
 function setupAndInitCodegraph({
   parentDir,
   agentsName,
   selectedFolders,
+  copilot = true,
+  opencode = false,
 }) {
   const lines = [];
   const { runner, installed } = ensureCodegraphCli();
@@ -307,23 +341,24 @@ function setupAndInitCodegraph({
       : `CLI: using ${runner.label}`,
   );
 
-  let wireTarget = "copilot-vscode";
+  const preferred = codegraphWireTarget({ copilot, opencode });
+  let wireTarget = preferred;
   const wire = runCodegraph(runner, [
     "install",
-    "--target=copilot-vscode",
+    `--target=${preferred}`,
     "--yes",
   ]);
   if (!wire.ok) {
     const fallback = runCodegraph(runner, ["install", "--target=auto", "--yes"]);
     if (!fallback.ok) {
       throw new Error(
-        "codegraph install failed (tried --target=copilot-vscode and --target=auto)",
+        `codegraph install failed (tried --target=${preferred} and --target=auto)`,
       );
     }
     wireTarget = "auto";
     lines.push("Wire: codegraph install --target=auto --yes");
   } else {
-    lines.push("Wire: codegraph install --target=copilot-vscode --yes");
+    lines.push(`Wire: codegraph install --target=${preferred} --yes`);
   }
 
   const productFolders = selectedFolders.filter((name) => name !== agentsName);
@@ -573,6 +608,143 @@ function installPersonalCopilot(agentsRoot, mode) {
   return { lines, paths };
 }
 
+const SDLC_AGENTS_BEGIN = "<!-- SDLC-HARNESS:BEGIN -->";
+const SDLC_AGENTS_END = "<!-- SDLC-HARNESS:END -->";
+
+function wrapSdlcAgentsBlock(body) {
+  return `${SDLC_AGENTS_BEGIN}\n${String(body).trim()}\n${SDLC_AGENTS_END}\n`;
+}
+
+function upsertMarkedBlock(file, body) {
+  const block = wrapSdlcAgentsBlock(body);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (!pathExists(file)) {
+    fs.writeFileSync(file, block, "utf8");
+    return "created";
+  }
+  const current = fs.readFileSync(file, "utf8");
+  const start = current.indexOf(SDLC_AGENTS_BEGIN);
+  const end = current.indexOf(SDLC_AGENTS_END);
+  if (start !== -1 && end !== -1 && end > start) {
+    const after = current.slice(end + SDLC_AGENTS_END.length).replace(/^\r?\n/, "");
+    fs.writeFileSync(file, `${current.slice(0, start)}${block}${after}`, "utf8");
+    return "updated";
+  }
+  const sep = current.endsWith("\n") ? "\n" : "\n\n";
+  fs.writeFileSync(file, `${current}${sep}${block}`, "utf8");
+  return "appended";
+}
+
+function removeMarkedBlock(file) {
+  if (!pathExists(file)) return false;
+  const current = fs.readFileSync(file, "utf8");
+  const start = current.indexOf(SDLC_AGENTS_BEGIN);
+  const end = current.indexOf(SDLC_AGENTS_END);
+  if (start === -1 || end === -1 || end < start) return false;
+  let next = `${current.slice(0, start)}${current.slice(end + SDLC_AGENTS_END.length)}`;
+  next = next.replace(/^\s+/, "").replace(/\s+$/, "");
+  if (!next) {
+    fs.rmSync(file, { force: true });
+  } else {
+    fs.writeFileSync(file, next.endsWith("\n") ? next : `${next}\n`, "utf8");
+  }
+  return true;
+}
+
+function posixJoin(...parts) {
+  return parts
+    .join("/")
+    .replace(/\\/g, "/")
+    .replace(/\/{2,}/g, "/");
+}
+
+function buildParentOpencodeJson(agentsName) {
+  const prefix = posixJoin(".", agentsName);
+  return {
+    $schema: "https://opencode.ai/config.json",
+    default_agent: "sdlc-orchestrator",
+    instructions: [
+      posixJoin(prefix, ".github/copilot-instructions.md"),
+      posixJoin(prefix, ".github/instructions/*.md"),
+      posixJoin(prefix, "AGENTS.md"),
+    ],
+    skills: [posixJoin(prefix, ".github/skills")],
+  };
+}
+
+function installParentOpencode(parentDir, agentsName, agentsRoot, mode) {
+  const jsonPath = path.join(parentDir, "opencode.json");
+  const agentsDest = path.join(parentDir, ".opencode", "agents");
+  const agentsSrc = path.join(agentsRoot, ".opencode", "agents");
+  const lines = [];
+  const paths = [];
+
+  fs.writeFileSync(
+    jsonPath,
+    `${JSON.stringify(buildParentOpencodeJson(agentsName), null, 2)}\n`,
+    "utf8",
+  );
+  lines.push(`wrote ${jsonPath}`);
+  paths.push(jsonPath);
+
+  if (!isDirectory(agentsSrc)) {
+    throw new Error(`OpenCode agents missing at ${agentsSrc}`);
+  }
+  lines.push(linkOrCopy(agentsSrc, agentsDest, mode));
+  paths.push(agentsDest);
+
+  return { lines, paths, jsonPath, agentsDest };
+}
+
+function installPersonalOpencode(agentsRoot, mode) {
+  const targetBase = path.join(os.homedir(), ".config", "opencode");
+  const agentsSrc = path.join(agentsRoot, ".opencode", "agents");
+  const skillsSrc = path.join(agentsRoot, ".github", "skills");
+  const lines = [];
+  const paths = [];
+
+  fs.mkdirSync(path.join(targetBase, "agents"), { recursive: true });
+  fs.mkdirSync(path.join(targetBase, "skills"), { recursive: true });
+
+  if (isDirectory(agentsSrc)) {
+    for (const f of fs.readdirSync(agentsSrc)) {
+      if (!f.endsWith(".md")) continue;
+      const dest = path.join(targetBase, "agents", f);
+      lines.push(linkOrCopy(path.join(agentsSrc, f), dest, mode));
+      paths.push(dest);
+    }
+  }
+
+  if (isDirectory(skillsSrc)) {
+    for (const name of fs.readdirSync(skillsSrc)) {
+      const src = path.join(skillsSrc, name);
+      if (!isDirectory(src)) continue;
+      const dest = path.join(targetBase, "skills", name);
+      lines.push(linkOrCopy(src, dest, mode));
+      paths.push(dest);
+    }
+  }
+
+  const agentsMdSrc = path.join(agentsRoot, "AGENTS.md");
+  const agentsMdDest = path.join(targetBase, "AGENTS.md");
+  if (fs.existsSync(agentsMdSrc)) {
+    const action = upsertMarkedBlock(
+      agentsMdDest,
+      fs.readFileSync(agentsMdSrc, "utf8"),
+    );
+    lines.push(`AGENTS.md: ${action} ${agentsMdDest}`);
+  }
+
+  return { lines, paths, agentsMdPath: agentsMdDest };
+}
+
+function refreshOpencodeAgents(agentsRoot) {
+  if (!fs.existsSync(path.join(agentsRoot, ".github", "agents"))) {
+    return { written: [], removed: [], skipped: true };
+  }
+  return syncOpencodeAgents(agentsRoot);
+}
+
 function buildWorkspace({ agentsFolderName, selectedFolders }) {
   const folders = [
     { name: agentsFolderName, path: `./${agentsFolderName}` },
@@ -639,52 +811,125 @@ function finish({
   action,
   workspacePath,
   workspaceDoc,
+  copilot,
+  opencode,
   personal,
   personalMode,
   personalLines,
+  opencodePersonalLines,
+  opencodeParentLines,
   codegraph,
   codegraphLines,
   caveman,
   cavemanLines,
 }) {
-  p.note(
-    [
-      `Parent:     ${parentDir}`,
-      `Harness:    ${agentsRoot} (${action})`,
-      `Workspace:  ${workspacePath}`,
-      `Folders:    ${workspaceDoc.folders.map((f) => f.name).join(", ")}`,
-      personal
-        ? `~/.copilot: ${personalLines.length} links/copies (${personalMode})`
-        : "~/.copilot: skipped",
-      codegraph
-        ? `CodeGraph:  set up (${(codegraphLines || []).filter((l) => l.startsWith("Init:")).length} repo inits)`
-        : "CodeGraph:  skipped",
-      caveman
-        ? `Caveman:    pack installed (${(cavemanLines || []).filter((l) => l.startsWith("Skill:")).length} skills)`
-        : "Caveman:    pack skipped (core chat skill still in harness)",
-    ].join("\n"),
-    "Result",
-  );
+  const folderNames = workspaceDoc?.folders?.map((f) => f.name).join(", ");
+  const result = [
+    `Parent:     ${parentDir}`,
+    `Harness:    ${agentsRoot} (${action})`,
+    copilot
+      ? `Workspace:  ${workspacePath}`
+      : "Workspace:  skipped (Copilot off)",
+    folderNames ? `Folders:    ${folderNames}` : null,
+    copilot
+      ? personal
+        ? `~/.copilot: ${(personalLines || []).length} links/copies (${personalMode})`
+        : "~/.copilot: skipped"
+      : null,
+    opencode
+      ? `OpenCode:   parent config${(opencodeParentLines || []).length ? ` (${opencodeParentLines.length} writes)` : ""}`
+      : "OpenCode:   skipped",
+    opencode
+      ? personal
+        ? `~/.config/opencode: ${(opencodePersonalLines || []).length} links/copies (${personalMode})`
+        : "~/.config/opencode: skipped"
+      : null,
+    codegraph
+      ? `CodeGraph:  set up (${(codegraphLines || []).filter((l) => l.startsWith("Init:")).length} repo inits)`
+      : "CodeGraph:  skipped",
+    caveman
+      ? `Caveman:    pack installed (${(cavemanLines || []).filter((l) => l.startsWith("Skill:")).length} skills)`
+      : "Caveman:    pack skipped (core chat skill still in harness)",
+  ].filter(Boolean);
 
-  const next = [
-    "1. VS Code → File → Open Workspace from File…",
-    `   ${workspacePath}`,
-    "2. az login && az extension add --name azure-devops --upgrade",
-  ];
+  p.note(result.join("\n"), "Result");
+
+  const next = [];
+  let n = 1;
+  if (copilot && workspacePath) {
+    next.push(`${n++}. VS Code → File → Open Workspace from File…`);
+    next.push(`   ${workspacePath}`);
+  }
+  if (opencode) {
+    next.push(`${n++}. cd "${parentDir}" && opencode`);
+    next.push("   Tab → sdlc-orchestrator (or sdlc-orchestrator-economy)");
+  }
+  next.push(
+    `${n++}. az login && az extension add --name azure-devops --upgrade`,
+  );
   if (codegraph) {
-    next.push("3. Restart VS Code / Copilot (loads CodeGraph MCP)");
-    next.push("4. Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)");
+    const restart = [
+      copilot ? "VS Code / Copilot" : null,
+      opencode ? "OpenCode" : null,
+    ]
+      .filter(Boolean)
+      .join(" and ");
+    next.push(`${n++}. Restart ${restart} (loads CodeGraph MCP)`);
+    if (copilot) {
+      next.push(
+        `${n++}. Copilot Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)`,
+      );
+    }
   } else {
-    next.push("3. codegraph install --target=copilot-vscode --yes");
-    next.push("4. codegraph init in each product repo");
-    next.push("5. Restart VS Code / Copilot");
-    next.push("6. Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)");
+    const targets = codegraphWireTarget({
+      copilot: !!copilot,
+      opencode: !!opencode,
+    });
+    next.push(`${n++}. codegraph install --target=${targets} --yes`);
+    next.push(`${n++}. codegraph init in each product repo`);
+    if (copilot) {
+      next.push(`${n++}. Restart VS Code / Copilot`);
+      next.push(
+        `${n++}. Copilot Chat → sdlc-orchestrator (or sdlc-orchestrator-economy)`,
+      );
+    }
+    if (opencode) {
+      next.push(`${n++}. Restart OpenCode if it was already running`);
+    }
   }
   next.push("To remove later: npx sdlc-copilot-harness uninstall");
 
   p.note(next.join("\n"), "Next");
 
-  p.outro(c.green("Done. Open the workspace and start with sdlc-orchestrator."));
+  const outro = copilot
+    ? "Done. Open the workspace and start with sdlc-orchestrator."
+    : "Done. Launch OpenCode from the parent folder and Tab to sdlc-orchestrator.";
+  p.outro(c.green(outro));
+}
+
+function runtimeInitial(args) {
+  if (args.copilot === false && args.opencode === true) return "opencode";
+  if (args.opencode === false && args.copilot !== false) return "copilot";
+  return "both";
+}
+
+function personalPrompt(copilot, opencode) {
+  if (copilot && opencode) {
+    return {
+      confirm: "Also install agents/skills for personal use? (~/.copilot and ~/.config/opencode)",
+      mode: "Personal install mode (~/.copilot and ~/.config/opencode)",
+    };
+  }
+  if (opencode) {
+    return {
+      confirm: "Also install agents/skills into ~/.config/opencode for personal use?",
+      mode: "~/.config/opencode install mode",
+    };
+  }
+  return {
+    confirm: "Also install agents/skills into ~/.copilot for personal use?",
+    mode: "~/.copilot install mode",
+  };
 }
 
 async function runInteractive(args) {
@@ -736,7 +981,7 @@ async function runInteractive(args) {
   }
 
   const selected = await p.multiselect({
-    message: "Folders to include in the VS Code workspace",
+    message: "Folders to include (product repos + harness)",
     options:
       options.length > 0
         ? options
@@ -752,21 +997,43 @@ async function runInteractive(args) {
     new Set([agentsName, ...selected.map(String)]),
   );
 
-  const workspaceFileName = await p.text({
-    message: "Workspace file name (written into the parent folder)",
-    initialValue: args.workspace || "sdlc.code-workspace",
-    validate(v) {
-      if (!v?.trim()) return "Required";
-      if (!v.endsWith(".code-workspace")) {
-        return "Must end with .code-workspace";
-      }
-      return undefined;
-    },
+  const runtime = await p.select({
+    message: "Which agent runtimes?",
+    options: [
+      {
+        value: "both",
+        label: "GitHub Copilot (VS Code) and OpenCode",
+        hint: "recommended",
+      },
+      { value: "copilot", label: "GitHub Copilot (VS Code) only" },
+      { value: "opencode", label: "OpenCode only" },
+    ],
+    initialValue: runtimeInitial(args),
   });
-  if (p.isCancel(workspaceFileName)) return cancel();
+  if (p.isCancel(runtime)) return cancel();
+  const copilot = runtime !== "opencode";
+  const opencode = runtime !== "copilot";
 
+  let workspaceFileName = args.workspace || "sdlc.code-workspace";
+  if (copilot) {
+    const workspaceRaw = await p.text({
+      message: "Workspace file name (written into the parent folder)",
+      initialValue: workspaceFileName,
+      validate(v) {
+        if (!v?.trim()) return "Required";
+        if (!v.endsWith(".code-workspace")) {
+          return "Must end with .code-workspace";
+        }
+        return undefined;
+      },
+    });
+    if (p.isCancel(workspaceRaw)) return cancel();
+    workspaceFileName = workspaceRaw.trim();
+  }
+
+  const prompt = personalPrompt(copilot, opencode);
   const personal = await p.confirm({
-    message: "Also install agents/skills into ~/.copilot for personal use?",
+    message: prompt.confirm,
     initialValue: args.personal ?? true,
   });
   if (p.isCancel(personal)) return cancel();
@@ -774,7 +1041,7 @@ async function runInteractive(args) {
   let personalMode = args.personalMode || "symlink";
   if (personal) {
     const mode = await p.select({
-      message: "~/.copilot install mode",
+      message: prompt.mode,
       options: [
         { value: "symlink", label: "Symlink (updates when harness changes)" },
         { value: "copy", label: "Copy (standalone snapshot)" },
@@ -786,8 +1053,9 @@ async function runInteractive(args) {
   }
 
   const productCount = selectedFolders.filter((n) => n !== agentsName).length;
+  const wire = codegraphWireTarget({ copilot, opencode });
   const codegraph = await p.confirm({
-    message: `Set up CodeGraph? (CLI if needed, wire Copilot VS Code, init ${productCount} product repo${productCount === 1 ? "" : "s"})`,
+    message: `Set up CodeGraph? (CLI if needed, wire ${wire}, init ${productCount} product repo${productCount === 1 ? "" : "s"})`,
     initialValue: args.codegraph ?? true,
   });
   if (p.isCancel(codegraph)) return cancel();
@@ -803,7 +1071,9 @@ async function runInteractive(args) {
     parentDir,
     agentsName,
     selectedFolders,
-    workspaceFileName: workspaceFileName.trim(),
+    workspaceFileName,
+    copilot,
+    opencode,
     personal,
     personalMode,
     codegraph,
@@ -827,11 +1097,20 @@ function runNonInteractive(args) {
       ...(args.folders?.length ? args.folders : siblings),
     ]),
   );
+  const copilot = args.copilot ?? true;
+  const opencode = args.opencode ?? false;
+  if (!copilot && !opencode) {
+    throw new Error(
+      "Select at least one runtime: Copilot (--copilot) and/or OpenCode (--opencode)",
+    );
+  }
   return {
     parentDir,
     agentsName,
     selectedFolders,
     workspaceFileName: args.workspace || "sdlc.code-workspace",
+    copilot,
+    opencode,
     personal: args.personal ?? true,
     personalMode: args.personalMode || "symlink",
     codegraph: args.codegraph ?? false,
@@ -983,6 +1262,59 @@ function discoverPersonalPaths(agentsRoot) {
   return found;
 }
 
+function listHarnessOpencodeAgentFiles(agentsRoot) {
+  const dir = path.join(agentsRoot, ".opencode", "agents");
+  const src = isDirectory(dir)
+    ? dir
+    : path.join(PACKAGE_ROOT, ".opencode", "agents");
+  if (!isDirectory(src)) return [];
+  return fs.readdirSync(src).filter((f) => f.endsWith(".md"));
+}
+
+function discoverPersonalOpencodePaths(agentsRoot) {
+  const targetBase = path.join(os.homedir(), ".config", "opencode");
+  const agentsRootResolved = path.resolve(agentsRoot);
+  const found = [];
+
+  for (const f of listHarnessOpencodeAgentFiles(agentsRoot)) {
+    const dest = path.join(targetBase, "agents", f);
+    if (shouldRemovePersonalPath(dest, agentsRootResolved)) found.push(dest);
+  }
+  for (const name of listHarnessSkillNames(agentsRoot)) {
+    const dest = path.join(targetBase, "skills", name);
+    if (shouldRemovePersonalPath(dest, agentsRootResolved)) found.push(dest);
+  }
+  return found;
+}
+
+function discoverOpencodeParent(parentDir, agentsRoot) {
+  const jsonPath = path.join(parentDir, "opencode.json");
+  const agentsDest = path.join(parentDir, ".opencode", "agents");
+  const paths = [];
+  if (pathExists(jsonPath)) {
+    const doc = readJsonFile(jsonPath);
+    const looksOurs =
+      doc?.default_agent === "sdlc-orchestrator" ||
+      JSON.stringify(doc || {}).includes(".github/skills");
+    if (looksOurs) paths.push(jsonPath);
+  }
+  if (pathExists(agentsDest)) {
+    try {
+      const st = fs.lstatSync(agentsDest);
+      if (st.isSymbolicLink()) {
+        if (shouldRemovePersonalPath(agentsDest, path.resolve(agentsRoot))) {
+          paths.push(agentsDest);
+        }
+      } else if (st.isDirectory() && isDirectory(path.join(agentsRoot, ".opencode", "agents"))) {
+        paths.push(agentsDest);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return paths;
+}
+
 function shouldRemovePersonalPath(dest, agentsRootResolved) {
   try {
     const st = fs.lstatSync(dest);
@@ -1040,6 +1372,10 @@ function discoverInstall(parentDir) {
 
   const agentsRoot = path.join(parentDir, agentsName);
   const personalPaths = discoverPersonalPaths(agentsRoot);
+  const opencodePersonalPaths = discoverPersonalOpencodePaths(agentsRoot);
+  const opencodeParentPaths = discoverOpencodeParent(parentDir, agentsRoot);
+  const opencodeJsonPath = path.join(parentDir, "opencode.json");
+  const opencodeAgentsPath = path.join(parentDir, ".opencode", "agents");
   const codegraphInits = (selectedFolders.length
     ? selectedFolders
     : listSiblingFolders(parentDir)
@@ -1067,6 +1403,21 @@ function discoverInstall(parentDir) {
     selectedFolders,
     personal: personalPaths.length > 0,
     personalPaths,
+    copilot: personalPaths.length > 0 || Boolean(workspaceFile),
+    opencode: opencodeParentPaths.length > 0 || opencodePersonalPaths.length > 0,
+    opencodeJsonPath: pathExists(opencodeJsonPath) ? opencodeJsonPath : null,
+    opencodeAgentsPath: pathExists(opencodeAgentsPath)
+      ? opencodeAgentsPath
+      : null,
+    opencodeParentPaths,
+    opencodePersonal: opencodePersonalPaths.length > 0,
+    opencodePersonalPaths,
+    opencodePersonalAgentsMd: path.join(
+      os.homedir(),
+      ".config",
+      "opencode",
+      "AGENTS.md",
+    ),
     codegraph: codegraphInits.length > 0,
     codegraphCliInstalledByUs: false,
     codegraphWire: codegraphInits.length > 0 ? "copilot-vscode" : null,
@@ -1122,19 +1473,25 @@ function uninstallCodegraphIndexes(inits) {
 function uninstallCodegraphWire(wireTarget) {
   const runner = resolveCodegraphRunner();
   if (!runner) {
-    return "CodeGraph CLI not on PATH; skipped Copilot unwire";
+    return "CodeGraph CLI not on PATH; skipped Copilot/OpenCode unwire";
   }
-  const target = wireTarget === "auto" ? "copilot-vscode" : (wireTarget || "copilot-vscode");
-  const result = runCodegraph(runner, [
-    "uninstall",
-    `--target=${target}`,
-    "--yes",
-    "--keep-cli",
-  ]);
-  if (!result.ok) {
-    return `codegraph uninstall --target=${target} failed (CLI left in place)`;
+  const raw = wireTarget === "auto" ? "copilot-vscode" : (wireTarget || "copilot-vscode");
+  const targets = raw.split(",").map((t) => t.trim()).filter(Boolean);
+  const lines = [];
+  for (const target of targets) {
+    const result = runCodegraph(runner, [
+      "uninstall",
+      `--target=${target}`,
+      "--yes",
+      "--keep-cli",
+    ]);
+    if (!result.ok) {
+      lines.push(`codegraph uninstall --target=${target} failed (CLI left in place)`);
+    } else {
+      lines.push(`unwired CodeGraph from ${target}`);
+    }
   }
-  return `unwired CodeGraph from ${target}`;
+  return lines.join("; ");
 }
 
 function uninstallCodegraphCli() {
@@ -1168,6 +1525,20 @@ function defaultUninstallTargets(state, args) {
   const selected = [];
   if (state.personalPaths?.length && !args.keepPersonal) selected.push("personal");
   if (state.workspacePath && !args.keepWorkspace) selected.push("workspace");
+  if (
+    !args.keepOpencode &&
+    (state.opencodeParentPaths?.length ||
+      state.opencodeJsonPath ||
+      state.opencodeAgentsPath)
+  ) {
+    selected.push("opencode-parent");
+  }
+  if (
+    !args.keepOpencode &&
+    (state.opencodePersonalPaths?.length || state.opencodePersonal)
+  ) {
+    selected.push("opencode-personal");
+  }
   if (
     !args.keepHarness &&
     state.harnessAction === "copied" &&
@@ -1206,6 +1577,29 @@ function buildUninstallOptions(state) {
       label: `Remove workspace file (${path.basename(state.workspacePath)})`,
     });
   }
+  const opencodeParentCount = [
+    state.opencodeJsonPath,
+    state.opencodeAgentsPath,
+    ...(state.opencodeParentPaths || []),
+  ].filter(Boolean).length;
+  if (
+    state.opencodeJsonPath ||
+    state.opencodeAgentsPath ||
+    state.opencodeParentPaths?.length
+  ) {
+    options.push({
+      value: "opencode-parent",
+      label: "Remove parent opencode.json and .opencode/agents",
+      hint: `${opencodeParentCount} path(s)`,
+    });
+  }
+  const opencodePersonalCount = state.opencodePersonalPaths?.length ?? 0;
+  if (opencodePersonalCount > 0 || state.opencodePersonal) {
+    options.push({
+      value: "opencode-personal",
+      label: `Remove ~/.config/opencode agents/skills${opencodePersonalCount ? ` (${opencodePersonalCount} items)` : ""}`,
+    });
+  }
   const harnessIsPackage =
     path.resolve(state.agentsRoot) === path.resolve(PACKAGE_ROOT);
   if (
@@ -1231,7 +1625,7 @@ function buildUninstallOptions(state) {
   if (state.codegraph || state.codegraphWire || state.codegraphInits?.length) {
     options.push({
       value: "codegraph-wire",
-      label: "Unwire CodeGraph from Copilot VS Code (keep CLI)",
+      label: `Unwire CodeGraph from ${state.codegraphWire || "configured agents"} (keep CLI)`,
     });
   }
   if (state.codegraphCliInstalledByUs) {
@@ -1291,6 +1685,33 @@ async function runUninstall(args) {
     const extra = discoverPersonalPaths(state.agentsRoot);
     state.personalPaths = Array.from(new Set([...state.personalPaths, ...extra]));
   }
+  if (!state.opencodePersonalPaths) {
+    state.opencodePersonalPaths = discoverPersonalOpencodePaths(state.agentsRoot);
+  } else {
+    const extra = discoverPersonalOpencodePaths(state.agentsRoot);
+    state.opencodePersonalPaths = Array.from(
+      new Set([...state.opencodePersonalPaths, ...extra]),
+    );
+  }
+  if (!state.opencodeParentPaths) {
+    state.opencodeParentPaths = discoverOpencodeParent(parentDir, state.agentsRoot);
+  }
+  if (!state.opencodeJsonPath) {
+    const jsonPath = path.join(parentDir, "opencode.json");
+    if (pathExists(jsonPath)) state.opencodeJsonPath = jsonPath;
+  }
+  if (!state.opencodeAgentsPath) {
+    const agentsDest = path.join(parentDir, ".opencode", "agents");
+    if (pathExists(agentsDest)) state.opencodeAgentsPath = agentsDest;
+  }
+  if (!state.opencodePersonalAgentsMd) {
+    state.opencodePersonalAgentsMd = path.join(
+      os.homedir(),
+      ".config",
+      "opencode",
+      "AGENTS.md",
+    );
+  }
   if (!Array.isArray(state.codegraphInits)) state.codegraphInits = [];
   state.codegraphInits = state.codegraphInits.map((item) => ({
     ...item,
@@ -1303,6 +1724,7 @@ async function runUninstall(args) {
       `Harness:    ${state.agentsRoot}${state.discovered ? " (discovered)" : ""}`,
       `Workspace:  ${state.workspacePath || "not found"}`,
       `~/.copilot: ${state.personalPaths.length} item(s)`,
+      `OpenCode:   ${(state.opencodeParentPaths || []).length} parent path(s), ${(state.opencodePersonalPaths || []).length} personal item(s)`,
       `CodeGraph:  ${state.codegraphInits.length} index(es)${state.codegraphWire ? `, wire=${state.codegraphWire}` : ""}`,
       `Caveman:    ${(state.cavemanSkillNames || []).length} optional pack skill(s)`,
     ].join("\n"),
@@ -1355,6 +1777,32 @@ async function runUninstall(args) {
     const removed = uninstallPersonal(state.personalPaths);
     report.push(`~/.copilot: removed ${removed.length} item(s)`);
   }
+  if (selected.includes("opencode-personal")) {
+    const removed = uninstallPersonal(state.opencodePersonalPaths || []);
+    if (state.opencodePersonalAgentsMd) {
+      if (removeMarkedBlock(state.opencodePersonalAgentsMd)) {
+        report.push("OpenCode: removed SDLC block from ~/.config/opencode/AGENTS.md");
+      }
+    }
+    report.push(`~/.config/opencode: removed ${removed.length} item(s)`);
+  }
+  if (selected.includes("opencode-parent")) {
+    const parentPaths = Array.from(
+      new Set(
+        [
+          state.opencodeJsonPath,
+          state.opencodeAgentsPath,
+          ...(state.opencodeParentPaths || []),
+        ].filter(Boolean),
+      ),
+    );
+    const removed = uninstallPersonal(parentPaths);
+    const opencodeDir = path.join(parentDir, ".opencode");
+    if (isDirectory(opencodeDir) && fs.readdirSync(opencodeDir).length === 0) {
+      removePath(opencodeDir);
+    }
+    report.push(`OpenCode parent: removed ${removed.length} path(s)`);
+  }
   if (selected.includes("codegraph-indexes")) {
     const lines = uninstallCodegraphIndexes(state.codegraphInits);
     report.push(...lines.map((l) => `CodeGraph: ${l}`));
@@ -1390,7 +1838,7 @@ async function runUninstall(args) {
   clearInstallState(parentDir);
   s.stop("Uninstall complete");
   p.note(report.join("\n"), "Removed");
-  p.outro(c.green("Done. Restart VS Code / Copilot if it was open."));
+  p.outro(c.green("Done. Restart VS Code / Copilot / OpenCode if they were open."));
 }
 
 function refreshHarnessFromPackage(agentsRoot) {
@@ -1509,6 +1957,7 @@ async function runUpdate(args) {
   const s = p.spinner();
   s.start("Refreshing harness files");
   refreshHarnessFromPackage(state.agentsRoot);
+  refreshOpencodeAgents(state.agentsRoot);
   s.stop(`Harness refreshed → ${runningVersion}`);
 
   const report = [
@@ -1526,14 +1975,43 @@ async function runUpdate(args) {
     p.note(cavemanResult.lines.join("\n"), "Caveman");
   }
 
-  if (state.personal) {
-    const mode = state.personalMode || "symlink";
+  const mode = state.personalMode || "symlink";
+  const copilotRuntime = state.copilot !== false;
+  const opencodeRuntime = Boolean(
+    state.opencode || state.opencodeJsonPath || state.opencodeAgentsPath,
+  );
+
+  if (state.personal && copilotRuntime) {
     const personal = installPersonalCopilot(state.agentsRoot, mode);
     state.personalPaths = personal.paths;
     state.personalMode = mode;
     report.push(
       `~/.copilot: re-applied ${personal.paths.length} item(s) (${mode})`,
     );
+  }
+
+  if (opencodeRuntime) {
+    const parent = installParentOpencode(
+      parentDir,
+      state.agentsName,
+      state.agentsRoot,
+      mode,
+    );
+    state.opencode = true;
+    state.opencodeJsonPath = parent.jsonPath;
+    state.opencodeAgentsPath = parent.agentsDest;
+    state.opencodeParentPaths = parent.paths;
+    report.push(`OpenCode parent: re-applied ${parent.paths.length} path(s)`);
+
+    if (state.personal || state.opencodePersonal) {
+      const ocPersonal = installPersonalOpencode(state.agentsRoot, mode);
+      state.opencodePersonal = true;
+      state.opencodePersonalPaths = ocPersonal.paths;
+      state.opencodePersonalAgentsMd = ocPersonal.agentsMdPath;
+      report.push(
+        `~/.config/opencode: re-applied ${ocPersonal.paths.length} item(s) (${mode})`,
+      );
+    }
   }
 
   state.packageVersion = runningVersion;
@@ -1544,7 +2022,7 @@ async function runUpdate(args) {
   p.note(report.join("\n"), "Updated");
   p.outro(
     c.green(
-      "Done. Restart VS Code / Copilot if agents were open. Workspace and CodeGraph were left as-is.",
+      "Done. Restart VS Code / Copilot / OpenCode if agents were open. Workspace and CodeGraph were left as-is.",
     ),
   );
 }
@@ -1569,22 +2047,27 @@ async function main() {
     : await runInteractive(args);
 
   const s = p.spinner();
-  s.start("Installing harness + workspace");
+  s.start("Installing harness");
 
   const { dest: agentsRoot, action } = ensureHarness(
     config.parentDir,
     config.agentsName,
   );
+  refreshOpencodeAgents(agentsRoot);
 
-  const workspaceDoc = buildWorkspace({
-    agentsFolderName: config.agentsName,
-    selectedFolders: config.selectedFolders,
-  });
-  const workspacePath = writeWorkspaceFile(
-    config.parentDir,
-    config.workspaceFileName,
-    workspaceDoc,
-  );
+  let workspaceDoc = null;
+  let workspacePath = null;
+  if (config.copilot) {
+    workspaceDoc = buildWorkspace({
+      agentsFolderName: config.agentsName,
+      selectedFolders: config.selectedFolders,
+    });
+    workspacePath = writeWorkspaceFile(
+      config.parentDir,
+      config.workspaceFileName,
+      workspaceDoc,
+    );
+  }
 
   let cavemanLines = [];
   let cavemanSkillNames = [];
@@ -1600,10 +2083,36 @@ async function main() {
 
   let personalLines = [];
   let personalPaths = [];
-  if (config.personal) {
+  if (config.personal && config.copilot) {
     const personal = installPersonalCopilot(agentsRoot, config.personalMode);
     personalLines = personal.lines;
     personalPaths = personal.paths;
+  }
+
+  let opencodeParentLines = [];
+  let opencodeParentPaths = [];
+  let opencodeJsonPath = null;
+  let opencodeAgentsPath = null;
+  let opencodePersonalLines = [];
+  let opencodePersonalPaths = [];
+  let opencodePersonalAgentsMd = null;
+  if (config.opencode) {
+    const parent = installParentOpencode(
+      config.parentDir,
+      config.agentsName,
+      agentsRoot,
+      config.personalMode || "symlink",
+    );
+    opencodeParentLines = parent.lines;
+    opencodeParentPaths = parent.paths;
+    opencodeJsonPath = parent.jsonPath;
+    opencodeAgentsPath = parent.agentsDest;
+    if (config.personal) {
+      const ocPersonal = installPersonalOpencode(agentsRoot, config.personalMode);
+      opencodePersonalLines = ocPersonal.lines;
+      opencodePersonalPaths = ocPersonal.paths;
+      opencodePersonalAgentsMd = ocPersonal.agentsMdPath;
+    }
   }
 
   s.stop("Install complete");
@@ -1617,11 +2126,19 @@ async function main() {
     agentsRoot,
     harnessAction: action,
     workspacePath,
-    workspaceFileName: config.workspaceFileName,
+    workspaceFileName: config.copilot ? config.workspaceFileName : null,
     selectedFolders: config.selectedFolders,
+    copilot: config.copilot,
+    opencode: config.opencode,
     personal: config.personal,
     personalMode: config.personalMode,
     personalPaths,
+    opencodeJsonPath,
+    opencodeAgentsPath,
+    opencodeParentPaths,
+    opencodePersonal: Boolean(config.opencode && config.personal),
+    opencodePersonalPaths,
+    opencodePersonalAgentsMd,
     codegraph: config.codegraph,
     codegraphCliInstalledByUs: false,
     codegraphWire: null,
@@ -1633,11 +2150,13 @@ async function main() {
 
   let codegraphLines = [];
   if (config.codegraph) {
-    p.log.step("Setting up CodeGraph (CLI, Copilot wire, init per product repo)…");
+    p.log.step("Setting up CodeGraph (CLI, wire selected runtimes, init per product repo)…");
     const result = setupAndInitCodegraph({
       parentDir: config.parentDir,
       agentsName: config.agentsName,
       selectedFolders: config.selectedFolders,
+      copilot: config.copilot,
+      opencode: config.opencode,
     });
     codegraphLines = result.lines;
     state.codegraphCliInstalledByUs = result.cliInstalledByUs;
@@ -1656,9 +2175,13 @@ async function main() {
     action,
     workspacePath,
     workspaceDoc,
+    copilot: config.copilot,
+    opencode: config.opencode,
     personal: config.personal,
     personalMode: config.personalMode,
     personalLines,
+    opencodePersonalLines,
+    opencodeParentLines,
     codegraph: config.codegraph,
     codegraphLines,
     caveman: config.caveman,
