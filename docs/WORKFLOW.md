@@ -1,6 +1,6 @@
 # Workflow
 
-End-to-end SDLC loop enforced by harness agents.
+End-to-end SDLC loop enforced by harness agents. **Full mode is the default.**
 
 ```text
 Request
@@ -15,7 +15,17 @@ Request
   → merge PR to feature branch
 ```
 
-ADO is the source of truth for PRD slices, AC, and review findings. Do not write `docs/prd/` or `docs/reviews/`.
+ADO is the source of truth for PRD slices, AC, and review findings in full mode. Do not write `docs/prd/` or `docs/reviews/`.
+
+## Direct mode
+
+Say `direct`, `skip analysis`, `no tickets`, or `no ADO`, or name one specialist (`analyst`, `tech-pm`, `ado-planner`, `ado-ops`, `implementer`, `code-reviewer`, or the `*-economy` twin). The orchestrator invokes only that agent and stops.
+
+- Missing analysis, chat PRD, or work item IDs is allowed.
+- `implementer` codes on the current branch. A requested branch is `feature/<slug>` with no work-item segment and no AB# link.
+- `code-reviewer` writes findings in chat. ADO bugs are filed when a parent ID exists or the user asks.
+- Creating Features, User Stories, or Tasks still waits for a confirmed Epic.
+- Phrases like “implement this” without an agent name stay on the full chain below.
 
 ## Invocation (Copilot vs OpenCode)
 
@@ -23,7 +33,7 @@ ADO is the source of truth for PRD slices, AC, and review findings. Do not write
 
 **OpenCode:** launch from the **parent folder**. Tab to `sdlc-orchestrator` (primary). Specialists are subagents — invoke with the **Task** tool or `@analyst`. After a specialist returns, **wait** before the next phase unless the user asked to continue. Economy: Tab to `sdlc-orchestrator-economy` and only Task `*-economy` specialists.
 
-## Phase details
+## Phase details (full mode)
 
 ### 1. Analysis
 

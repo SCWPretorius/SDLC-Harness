@@ -34,4 +34,6 @@ Skip stakeholders, risks tables, and long non-goals unless the user asks.
 
 ## Gate for next phase
 
-PRD must be reviewable by a human in chat before `ado-planner` creates work items. Ask user to confirm (or note explicit "proceed") before backlog creation. After confirm, pass slices + AC to `ado-planner` — AC lives on ADO work-item descriptions, not a file.
+Full mode: PRD must be reviewable by a human in chat before `ado-planner` creates work items. Ask user to confirm (or note explicit "proceed") before backlog creation. After confirm, pass slices + AC to `ado-planner` — AC lives on ADO work-item descriptions, not a file.
+
+Direct mode: stop after the chat PRD. Do not require `ado-planner`.

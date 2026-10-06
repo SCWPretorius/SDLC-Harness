@@ -44,25 +44,28 @@ Auto-clarity: drop caveman for security warnings, irreversible confirms, or mult
 
 ## Azure DevOps
 
-- **If no work items exist for the request, agents MUST create them** before branching or coding. Do not invent fake ticket IDs or proceed without ADO items.
+Full mode (default) requires real work items before branch or code. Direct mode (`direct`, `skip analysis`, `no tickets`, `no ADO`, or naming one specialist) does that agent's job without creating analysis docs or tickets.
+
+- **Full mode:** if no work items exist for the request, agents MUST create them before branching or coding. Do not invent fake ticket IDs or proceed without ADO items.
 - Creation path: `ado-planner` (ask Epic → create Epic if needed → **next slice** Feature → User Story → Task) using `az` / `scripts/ado/*`. Follow skill `ado-work-items`. Put AC on work-item descriptions. Return IDs in chat — no summary file.
-- Never create Feature, User Story, or Task until the user confirms which **Epic** to use (existing ID or create-new).
+- Never create Feature, User Story, or Task until the user confirms which **Epic** to use (existing ID or create-new). This Epic gate applies whenever items are created, including direct mode.
 - Use `az` CLI (or `scripts/ado/*`) for all board mutations. Do not invent REST calls when `az` works.
 - Follow states in `docs/ADO-STATES.md` and skills `ado-work-items` / `ado-ops` agent guidance.
-- Branching: `main` → `feature/<feature-slug>` → `feature/<feature-slug>/<work-item-id>-short-name` → PR into **feature branch**. See `ado-branching` and `docs/BRANCHING.md`.
-- `implementer` and `ado-ops` must **refuse** to code or branch when no work item ID exists — hand off to `ado-planner` first.
+- Branching in full mode: `main` → `feature/<feature-slug>` → `feature/<feature-slug>/<work-item-id>-short-name` → PR into **feature branch**. See `ado-branching` and `docs/BRANCHING.md`.
+- **Full mode:** `implementer` and `ado-ops` must **refuse** to code or branch when no work item ID exists — hand off to `ado-planner` first.
+- **Direct mode:** `implementer` codes on the current branch. `ado-ops` branches only when asked, as `feature/<slug>` with no AB# link. `code-reviewer` puts findings in chat and files ADO bugs only when a parent ID exists or the user asks.
 
 ## Implementation
 
 - Deliver work as vertical feature slices (.NET 10). Skills: `vertical-slice-dotnet`, `clean-code-csharp`.
 - Path-scoped rules under `.github/instructions/` apply when editing matching files.
-- After any implementation slice: hand off to code review. File ADO bugs/tasks under the relevant parent (findings live in bug descriptions). Do not write `docs/reviews/`. Then fix with the same development loop.
+- **Full mode:** after any implementation slice, hand off to code review. File ADO bugs/tasks under the relevant parent (findings live in bug descriptions). Do not write `docs/reviews/`. Then fix with the same development loop.
 
 ## Phase routing
 
 **Entry agent `sdlc-orchestrator` is a router only.** It must invoke specialist agents via the agent/subagent tool (or handoff buttons). It must not perform analysis, PRD writing, ADO mutations, implementation, or review itself.
 
-Required chain for new work:
+**Full mode** is the default. Required chain for new work:
 
 1. `analyst` → analysis docs
 2. `tech-pm` → chat PRD (user confirms; no file)
@@ -70,5 +73,7 @@ Required chain for new work:
 4. `ado-ops` → states / branches / PR links
 5. `implementer` → code
 6. `code-reviewer` → ADO bugs → back to `implementer`
+
+**Direct mode** when the user says `direct`, `skip analysis`, `no tickets`, or `no ADO`, or names exactly one specialist. Invoke only that agent. Phrases like “implement this” without an agent name stay on the full chain.
 
 If the active agent is `sdlc-orchestrator` and it starts doing specialist work, stop and switch to the correct specialist.

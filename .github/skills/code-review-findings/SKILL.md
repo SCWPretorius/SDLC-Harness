@@ -11,12 +11,16 @@ ADO is the source of truth. **Do not write `docs/reviews/` or any findings markd
 
 ## Process
 
+Full mode:
+
 1. Review the PR / diff for the active work item (correctness, security, tests, clean code, Azure concerns).
 2. Create one ADO Bug or Task per finding under the relevant Feature / User Story. Use `templates/review-findings.md` as the **ADO description outline** (not a file to save).
 3. Chat: severity counts + AB# list only.
 4. Hand off to `implementer` / `ado-ops` to fix on work-item branches using the same branching rules.
 
-File bugs yourself (`code-reviewer`). Do not hand off to `ado-planner` just to create tickets.
+Direct mode: put findings in chat (normal English). File ADO bugs only when a parent ID exists or the user asks. Do not hand off unless the user asks.
+
+File bugs yourself (`code-reviewer`) when ADO bugs are in scope. Do not hand off to `ado-planner` just to create tickets.
 
 ## Finding fields (in each ADO description)
 

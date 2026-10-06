@@ -10,9 +10,11 @@ Hierarchy: **Epic → Feature → User Story → Task**. Bugs created from revie
 
 Before creating any Feature, User Story, or Task: ask which Epic to use (existing ID or create new). Do not proceed until the user answers.
 
-## Mandatory backlog
+## Mandatory backlog (full mode)
 
 If no work items exist for the current request, **create** them (Epic if needed → Feature → User Story → Task) via `ado-planner` / `az` before branching or coding. Do not proceed without real work item IDs.
+
+Direct mode (`direct`, `skip analysis`, `no tickets`, `no ADO`, or naming one specialist) skips this. Epic selection above still applies whenever Features, User Stories, or Tasks are created.
 
 ## Default states
 

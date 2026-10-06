@@ -31,4 +31,6 @@ Product repos sit as siblings; harness is another sibling. Open via multi-root `
 
 ## Handoff
 
-When analysis is complete, hand off to `tech-pm` to draft a **chat PRD** (no file).
+Full mode: when analysis is complete, offer `tech-pm` to draft a **chat PRD** (no file).
+
+Direct mode: stop after the report. Name other specialists and wait.

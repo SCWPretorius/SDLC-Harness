@@ -8,6 +8,8 @@ description: >
 
 # Branching strategy
 
+Full mode uses the tree below. Direct mode with no work item ID stays on the current branch, or uses `feature/<slug>` when the user asks for a branch, with no AB# link.
+
 ```
 main
   └── feature/<feature-slug>

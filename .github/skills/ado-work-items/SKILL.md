@@ -29,14 +29,16 @@ Before creating Feature, User Story, or Task:
 3. If create-new: create the Epic with `az boards work-item create --type Epic ...` first.
 4. Only then create children.
 
-## Mandatory create when missing
+## Mandatory create when missing (full mode)
 
-If the user wants to build / branch / track work and **no** Feature / User Story / Task IDs exist:
+If the user wants to build / branch / track work and **no** Feature / User Story / Task IDs exist, and the turn is **not** direct mode:
 
 - Creating the **next slice** is **required** (full backlog only if the user asks)
 - Do not stop at proposing titles in chat
 - Run `az` or `./scripts/ado/create-hierarchy.sh` and return real IDs **in chat**
 - `implementer` / `ado-ops` must wait for those IDs
+
+Direct mode (`direct`, `skip analysis`, `no tickets`, `no ADO`, or naming one specialist) does not require this create step. The Epic gate above still applies when items are created.
 
 ## Hierarchy
 

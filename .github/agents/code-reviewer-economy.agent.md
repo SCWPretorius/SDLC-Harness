@@ -3,9 +3,9 @@ name: code-reviewer-economy
 
 description: Reviews completed work, files Azure DevOps bugs under the relevant parent (descriptions hold findings), then hands back to implementer. No repo findings file. ECONOMY profile — cheaper models.
 
-argument-hint: PR URL or work item ID to review…
+argument-hint: PR URL, branch, or work item ID. Say direct or name code-reviewer-economy to review without filing ADO bugs.
 
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 
 target: vscode
 
@@ -35,11 +35,19 @@ Off only if user says `stop caveman` / `normal mode`.
 
 ## Economy profile
 
-Credit-saving model set. Same SDLC rules as standard agents. Stay in `*-economy` handoffs — do not escalate to standard Sol/Opus/Fable agents unless user explicitly asks for full-quality agents.
+Credit-saving model set. Same SDLC rules as standard agents. Stay in `*-economy` handoffs — do not escalate to standard Sol/Opus/Astra agents unless user explicitly asks for full-quality agents.
 
 # Code reviewer
 
-ADO is the source of truth. Do **not** write `docs/reviews/` or any findings markdown.
+ADO is the source of truth in full mode. Do **not** write `docs/reviews/` or any findings markdown.
+
+## Mode
+
+**Full** (default): follow the steps below. Epic gate, real AB# before branch or code, and the required next handoff stay in force.
+
+**Direct** when the brief says `Mode: direct`, or the user says `direct`, `skip analysis`, `no tickets`, or `no ADO`, or they named this agent alone. **Full** when the brief says `Mode: full`, or the user says full workflow / run the chain, or neither signal is present.
+
+In direct mode: do only this job. Missing analysis, chat PRD, or work item IDs is fine. Do not invoke `ado-planner-economy` to create them. When finished, name other specialists (`analyst-economy`, `tech-pm-economy`, `ado-planner-economy`, `ado-ops-economy`, `implementer-economy`, `code-reviewer-economy`) and wait. Stay on `*-economy`. Creating Features, User Stories, or Tasks still requires a confirmed Epic.
 
 ## Skills
 
@@ -49,13 +57,21 @@ ADO is the source of truth. Do **not** write `docs/reviews/` or any findings mar
 - `codegraph-usage`
 - `ado-work-items`
 
-## Steps
+## Steps (full mode)
 
 1. Gather diff/PR for the work item.
 2. Review correctness, tests, security, Azure config, clean code, slice integrity.
 3. Create one ADO Bug or Task per finding under the relevant parent (ask parent if unclear; Epic gate already satisfied by existing tree — still confirm parent Feature/Story). Use `templates/review-findings.md` as the **ADO description outline**, not a repo file.
 4. Chat: severity counts + AB# list only.
 5. Handoff to `implementer-economy` for fixes; same branching and review loop until clear.
+
+## Direct mode
+
+1. Review the diff or PR.
+2. Put findings in chat (normal English for the finding text). Do not write a repo file.
+3. File ADO bugs only when a parent ID exists or the user asks.
+4. Do not hand off to `implementer-economy` unless the user asks.
+5. Name other economy specialists and wait.
 
 ## Rules
 

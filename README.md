@@ -107,13 +107,13 @@ Two profiles ship side by side. Copilot model fields use **slug IDs** (see [docs
 
 | Agent | Role | Model |
 |-------|------|-----------------|
-| `sdlc-orchestrator` | Route phases, enforce process | `gpt-5.6-terra` |
-| `analyst` | Multi-repo analysis + docs | `gpt-5.6-sol` |
-| `tech-pm` | Findings → short chat PRD (no file) | `claude-opus-4.8` |
-| `ado-planner` | Chat PRD → next-slice Feature / Story / Task (asks for Epic first) | `claude-sonnet-5` |
-| `ado-ops` | State moves, branch / PR linking | `gpt-5.6-luna` |
-| `implementer` | Vertical-slice .NET 10 implementation | `gpt-5.3-codex` |
-| `code-reviewer` | Review → ADO bugs (findings in descriptions) | `gpt-5.6-sol` |
+| `sdlc-orchestrator` | Route phases, enforce process | `gpt-6-sol` |
+| `analyst` | Multi-repo analysis + docs | `gpt-6.1-sol` |
+| `tech-pm` | Findings → short chat PRD (no file) | `claude-opus-5.5` |
+| `ado-planner` | Chat PRD → next-slice Feature / Story / Task (asks for Epic first) | `claude-sonnet-5.5` |
+| `ado-ops` | State moves, branch / PR linking | `gpt-6-luna` |
+| `implementer` | Vertical-slice .NET 10 implementation | `gpt-6-astra` |
+| `code-reviewer` | Review → ADO bugs (findings in descriptions) | `gpt-6.1-sol` |
 
 Each agent file sets only that model (no fallback list).
 
@@ -123,13 +123,13 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 
 | Agent | Role | Model |
 |-------|------|-----------------|
-| `sdlc-orchestrator-economy` | Route phases | `gpt-5.6-luna` |
-| `analyst-economy` | Multi-repo analysis + docs | `gpt-5.6-terra` |
-| `tech-pm-economy` | Findings → short chat PRD (no file) | `claude-sonnet-5` |
-| `ado-planner-economy` | Chat PRD → next-slice Feature / Story / Task | `gpt-5.6-terra` |
-| `ado-ops-economy` | States / branches / PR links | `gpt-5.6-luna` |
-| `implementer-economy` | Vertical-slice implementation | `gpt-5.3-codex` |
-| `code-reviewer-economy` | Review → ADO bugs (findings in descriptions) | `claude-sonnet-5` |
+| `sdlc-orchestrator-economy` | Route phases | `gpt-6-luna` |
+| `analyst-economy` | Multi-repo analysis + docs | `gpt-6-sol` |
+| `tech-pm-economy` | Findings → short chat PRD (no file) | `claude-sonnet-5.5` |
+| `ado-planner-economy` | Chat PRD → next-slice Feature / Story / Task | `gpt-6-sol` |
+| `ado-ops-economy` | States / branches / PR links | `gpt-6-luna` |
+| `implementer-economy` | Vertical-slice implementation | `gpt-6.1-sol` |
+| `code-reviewer-economy` | Review → ADO bugs (findings in descriptions) | `claude-sonnet-5.5` |
 
 **How to use economy mode**
 
@@ -137,7 +137,7 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 
 1. Open the multi-root workspace.
 2. In Copilot Chat, pick **`sdlc-orchestrator-economy`** (not `sdlc-orchestrator`).
-3. Stay on `*-economy` handoffs for the whole flow — do not mix with standard Sol/Opus agents mid-run.
+3. Stay on `*-economy` handoffs for the whole flow — do not mix with standard Sol/Opus/Astra agents mid-run.
 
 **OpenCode**
 
@@ -147,7 +147,7 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 
 Escalate to standard agents only when you need full-quality analysis or review (large multi-repo ambiguity, security-critical review).
 
-Economy defaults avoid: `gpt-5.6-sol`, `claude-opus-4.8`.
+Economy defaults avoid: `gpt-6-astra`, `claude-opus-5.5`.
 
 Details: [docs/ECONOMY.md](docs/ECONOMY.md).
 
@@ -178,10 +178,10 @@ node bin/sync-opencode-agents.mjs
 
 1. Chat uses **caveman full** always (forced via always-on instructions + skill + every agent). Do not wait for `/caveman`. Persisted artifacts (analysis reports, ADO text, commits, PRs) use normal English. Do not write PRD or review markdown into the repo.
 2. Prefer **CodeGraph** before blind grep/search.
-3. Never create Features / User Stories / Tasks without a confirmed **Epic**. If no work items exist, **create the next slice** before branch/code. AC lives on the tickets; IDs in chat.
-4. Branching: `main` → `feature/<slug>` → `feature/<slug>/<id>-name` → PR → feature branch.
+3. Never create Features / User Stories / Tasks without a confirmed **Epic**. In full mode, if no work items exist, **create the next slice** before branch/code. AC lives on the tickets; IDs in chat. Direct mode (say `direct` or name one agent) skips analysis and ticket creation.
+4. Branching in full mode: `main` → `feature/<slug>` → `feature/<slug>/<id>-name` → PR → feature branch. Direct mode with no ID: current branch, or `feature/<slug>` when the user asks for a branch.
 5. Implementation follows **vertical feature slices** and clean C# practices.
-6. After implementation: review → file ADO bugs (findings in descriptions) → fix with the same implementer loop.
+6. Full mode after implementation: review → file ADO bugs (findings in descriptions) → fix with the same implementer loop. Direct mode: review findings stay in chat unless a parent ID exists or the user asks for ADO bugs.
 7. All ADO mutations go through `az` CLI (or the scripts under `scripts/ado/`).
 
 ## Docs

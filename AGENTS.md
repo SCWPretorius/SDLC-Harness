@@ -17,7 +17,7 @@ Tab to **`sdlc-orchestrator`** (quality) or **`sdlc-orchestrator-economy`** (che
 - Orchestrator is a **router only**. It must invoke specialists; it must not analyze, write PRDs, mutate ADO, implement, or review itself.
 - Human gates: after a specialist returns, **wait** before the next phase unless the user asked to continue.
 
-Required chain for new work:
+Required chain for new work (full mode, the default):
 
 1. `analyst` → analysis docs
 2. `tech-pm` → chat PRD (user confirms; no file)
@@ -25,6 +25,8 @@ Required chain for new work:
 4. `ado-ops` → states / branches / PR links
 5. `implementer` → code
 6. `code-reviewer` → ADO bugs → back to `implementer`
+
+Direct mode: say `direct` (or `skip analysis` / `no tickets` / `no ADO`) or name one specialist. That agent runs alone. “implement this” without an agent name stays on the full chain.
 
 Economy: Tab to `sdlc-orchestrator-economy` and only Task `*-economy` specialists. See `docs/ECONOMY.md`.
 
@@ -34,10 +36,10 @@ Full text: `.github/copilot-instructions.md`. Path-scoped extras: `.github/instr
 
 1. Chat = **caveman full** every turn. Normal English only for persisted artifacts (analysis reports, ADO text, commits, PRs). Off only if user says `stop caveman` / `normal mode`.
 2. Prefer **CodeGraph** before blind grep/search (`codegraph install --target=opencode`).
-3. Never create Features / User Stories / Tasks without a confirmed **Epic**. If no work items exist, **create the next slice** before branch/code. AC lives on the tickets; IDs in chat.
-4. Branching: `main` → `feature/<slug>` → `feature/<slug>/<id>-name` → PR → feature branch.
+3. Never create Features / User Stories / Tasks without a confirmed **Epic**. In full mode, if no work items exist, **create the next slice** before branch/code. AC lives on the tickets; IDs in chat. Direct mode (say `direct` or name one agent) skips analysis and ticket creation.
+4. Branching in full mode: `main` → `feature/<slug>` → `feature/<slug>/<id>-name` → PR → feature branch. Direct mode with no ID: current branch, or `feature/<slug>` when the user asks for a branch.
 5. Implementation: vertical feature slices, clean C# / .NET 10.
-6. After implementation: review → file ADO bugs (findings in descriptions) → fix with the same implementer loop.
+6. Full mode after implementation: review → file ADO bugs (findings in descriptions) → fix with the same implementer loop. Direct mode: review findings stay in chat unless a parent ID exists or the user asks for ADO bugs.
 7. All ADO mutations go through `az` CLI (or `scripts/ado/`).
 
 Models: OpenCode agents do **not** pin Copilot slugs. Use `/models` (or `opencode.json` `model`) for your provider. Optional mapping: `docs/MODEL-IDS.md`.
