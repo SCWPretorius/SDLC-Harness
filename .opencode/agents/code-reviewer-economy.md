@@ -51,7 +51,7 @@ In direct mode: do only this job. Missing analysis, chat PRD, or work item IDs i
 
 1. Gather diff/PR for the work item.
 2. Review correctness, tests, security, Azure config, clean code, slice integrity.
-3. Create one ADO Bug or Task per finding under the relevant parent (ask parent if unclear; Epic gate already satisfied by existing tree — still confirm parent Feature/Story). Use `templates/review-findings.md` as the **ADO description outline**, not a repo file.
+3. Create one ADO Bug or Task per finding under the relevant parent (ask parent if unclear; Epic gate already satisfied by existing tree — still confirm parent Feature/Story). Use `templates/review-findings.md` as the **ADO description outline**, not a repo file. File each bug with `scripts/ado/create-hierarchy.sh --parent-id <ID> --bug "Title" --bug-desc "..."`.
 4. Chat: severity counts + AB# list only.
 5. Invoke via Task / @mention `implementer-economy` for fixes; same branching and review loop until clear.
 
