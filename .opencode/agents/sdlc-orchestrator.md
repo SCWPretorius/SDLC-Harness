@@ -87,9 +87,9 @@ Never end a turn with “I can draft the PRD / analyze / implement for you” �
 
 | Order | Phase | Agent | Exit criteria before next |
 |------:|-------|-------|---------------------------|
-| 1 | Analysis | `analyst` | Analysis markdown path exists |
-| 2 | PRD | `tech-pm` | User said chat PRD confirmed (no file) |
-| 3 | Backlog | `ado-planner` | Epic confirmed + **next-slice work items created in ADO** (real IDs in chat) |
+| 1 | Analysis | `analyst` | Analysis markdown path exists and the memory card Plan section is upserted |
+| 2 | PRD | `tech-pm` | User confirmed the chat PRD (no `docs/prd/`) and the memory card PRD section is upserted |
+| 3 | Backlog | `ado-planner` | Epic confirmed + **next-slice work items created in ADO** (real IDs in chat) and the memory card ADO section is upserted |
 | 4 | Branch/state | `ado-ops` | Feature + work-item branch ready, item Active |
 | 5 | Implement | `implementer` | PR to feature branch (or commits ready for review) |
 | 6 | Review | `code-reviewer` | ADO bugs filed if needed (descriptions hold findings) |

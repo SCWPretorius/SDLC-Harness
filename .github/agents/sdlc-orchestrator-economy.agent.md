@@ -26,13 +26,15 @@ handoffs:
     prompt: |
       Mode: full. You are the analyst-economy specialist. Run multi-repo analysis for the user request in this chat.
       Use CodeGraph first. Write docs/analysis/<date>-<slug>.md from templates/analysis-report.md.
+      Then upsert memory/cards/<same-stem>.md (Plan section) and one memory/INDEX.md line. Skill cross-session-memory. Do not copy the report.
       Do not edit product code. When done, summarize path to the report and stop.
     send: false
   - label: 2 · PRD
     agent: tech-pm-economy
     prompt: |
       Mode: full. You are the tech-pm-economy specialist. Convert the latest analysis report into a short chat PRD
-      (templates/prd.md as outline only — do not write a file). Ask user to confirm. Do not create ADO items.
+      (templates/prd.md as outline only — do not write docs/prd/). Ask user to confirm.
+      After confirm, upsert the memory card PRD section (skill cross-session-memory). Do not create ADO items.
     send: false
   - label: 3 · ADO backlog
     agent: ado-planner-economy
@@ -40,7 +42,8 @@ handoffs:
       Mode: full. You are the ado-planner-economy specialist. No usable work items may exist yet — CREATE them.
       HARD GATE — ask which Epic (ID or create-new) and wait. If create-new, create the Epic first.
       Then CREATE the next slice only (Feature → Story → Task as needed) from the confirmed chat PRD via az / scripts/ado.
-      Put AC on work-item descriptions. Return real IDs in chat. Do not write a summary file.
+      Put AC on work-item descriptions. Return real IDs in chat. Do not write a backlog summary.
+      After IDs exist, upsert the memory card ADO section (AB# and title only, skill cross-session-memory).
     send: false
   - label: 4 · Branches + states
     agent: ado-ops-economy
@@ -135,9 +138,9 @@ Never end a turn with “I can draft the PRD / analyze / implement for you” �
 
 | Order | Phase | Agent | Exit criteria before next |
 |------:|-------|-------|---------------------------|
-| 1 | Analysis | `analyst-economy` | Analysis markdown path exists |
-| 2 | PRD | `tech-pm-economy` | User said chat PRD confirmed (no file) |
-| 3 | Backlog | `ado-planner-economy` | Epic confirmed + **next-slice work items created in ADO** (real IDs in chat) |
+| 1 | Analysis | `analyst-economy` | Analysis markdown path exists and the memory card Plan section is upserted |
+| 2 | PRD | `tech-pm-economy` | User confirmed the chat PRD (no `docs/prd/`) and the memory card PRD section is upserted |
+| 3 | Backlog | `ado-planner-economy` | Epic confirmed + **next-slice work items created in ADO** (real IDs in chat) and the memory card ADO section is upserted |
 | 4 | Branch/state | `ado-ops-economy` | Feature + work-item branch ready, item Active |
 | 5 | Implement | `implementer-economy` | PR to feature branch (or commits ready for review) |
 | 6 | Review | `code-reviewer-economy` | ADO bugs filed if needed (descriptions hold findings) |

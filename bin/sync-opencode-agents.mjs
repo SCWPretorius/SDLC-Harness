@@ -123,16 +123,23 @@ function permissionsFor(name, specialists, handoffAgents) {
       break;
     case "analyst":
       permission = {
-        edit: { "*": "deny", "docs/analysis/**": "allow" },
+        edit: { "*": "deny", "docs/analysis/**": "allow", "memory/**": "allow" },
       };
       break;
     case "tech-pm":
-      permission = { edit: "deny" };
+      permission = {
+        edit: { "*": "deny", "memory/**": "allow" },
+      };
       break;
     case "code-reviewer":
       permission = { edit: "deny", bash: "allow" };
       break;
     case "ado-planner":
+      permission = {
+        edit: { "*": "deny", "memory/**": "allow" },
+        bash: "allow",
+      };
+      break;
     case "ado-ops":
       permission = { edit: "deny", bash: "allow" };
       break;
