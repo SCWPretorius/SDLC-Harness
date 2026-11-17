@@ -5,7 +5,7 @@ description: STRICT router only. Must invoke specialist subagents. Full chain by
 
 argument-hint: Full chain by default. Say direct or name one agent (analyst, tech-pm, ado-planner, ado-ops, implementer, code-reviewer) to skip analysis and tickets.
 
-model: gpt-6-sol
+model: gpt-6.1-terra
 
 target: vscode
 

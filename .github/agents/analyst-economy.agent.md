@@ -5,7 +5,7 @@ description: Multi-repo technical analyst. Uses CodeGraph, writes concise analys
 
 argument-hint: What should be analyzed? Full chain continues to tech-pm-economy. Say direct or name analyst-economy to stop after the report.
 
-model: gpt-6-sol
+model: gpt-6.1-terra
 
 target: vscode
 

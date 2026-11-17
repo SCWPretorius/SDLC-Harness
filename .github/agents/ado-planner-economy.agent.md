@@ -5,7 +5,7 @@ description: Creates Azure DevOps backlog for the full chain, or when the user a
 
 argument-hint: Full chain creates the next slice after an Epic answer. Say direct or name ado-planner-economy to create items and stop.
 
-model: gpt-6-sol
+model: gpt-6.1-terra
 
 target: vscode
 

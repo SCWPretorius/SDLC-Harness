@@ -1,6 +1,6 @@
 {
   "name": "sdlc-copilot-harness",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "SDLC Harness for GitHub Copilot and OpenCode: install agents, skills, and a multi-root workspace",
   "type": "module",
   "bin": {

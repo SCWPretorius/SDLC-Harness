@@ -27,9 +27,9 @@ Each Copilot economy agent file sets only the README model (no fallback list). O
 | Agent | Model |
 |-------|-------|
 | `sdlc-orchestrator-economy` | `gpt-6-luna` |
-| `analyst-economy` | `gpt-6-sol` |
+| `analyst-economy` | `gpt-6.1-terra` |
 | `tech-pm-economy` | `claude-sonnet-5.5` |
-| `ado-planner-economy` | `gpt-6-sol` |
+| `ado-planner-economy` | `gpt-6.1-terra` |
 | `ado-ops-economy` | `gpt-6-luna` |
 | `implementer-economy` | `gpt-6.1-sol` |
 | `code-reviewer-economy` | `claude-sonnet-5.5` |

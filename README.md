@@ -107,7 +107,7 @@ Two profiles ship side by side. Copilot model fields use **slug IDs** (see [docs
 
 | Agent | Role | Model |
 |-------|------|-----------------|
-| `sdlc-orchestrator` | Route phases, enforce process | `gpt-6-sol` |
+| `sdlc-orchestrator` | Route phases, enforce process | `gpt-6.1-terra` |
 | `analyst` | Multi-repo analysis + docs | `gpt-6.1-sol` |
 | `tech-pm` | Findings → short chat PRD (no file) | `claude-opus-5.5` |
 | `ado-planner` | Chat PRD → next-slice Feature / Story / Task (asks for Epic first) | `claude-sonnet-5.5` |
@@ -124,9 +124,9 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 | Agent | Role | Model |
 |-------|------|-----------------|
 | `sdlc-orchestrator-economy` | Route phases | `gpt-6-luna` |
-| `analyst-economy` | Multi-repo analysis + docs | `gpt-6-sol` |
+| `analyst-economy` | Multi-repo analysis + docs | `gpt-6.1-terra` |
 | `tech-pm-economy` | Findings → short chat PRD (no file) | `claude-sonnet-5.5` |
-| `ado-planner-economy` | Chat PRD → next-slice Feature / Story / Task | `gpt-6-sol` |
+| `ado-planner-economy` | Chat PRD → next-slice Feature / Story / Task | `gpt-6.1-terra` |
 | `ado-ops-economy` | States / branches / PR links | `gpt-6-luna` |
 | `implementer-economy` | Vertical-slice implementation | `gpt-6.1-sol` |
 | `code-reviewer-economy` | Review → ADO bugs (findings in descriptions) | `claude-sonnet-5.5` |
