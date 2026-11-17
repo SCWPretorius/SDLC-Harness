@@ -176,7 +176,35 @@ node bin/sync-opencode-agents.mjs
 
 **OpenCode:** generated agents omit `model` so your connected provider applies. Use `/models` (or `opencode.json` `model`). Optional mapping notes are in [MODEL-IDS.md](MODEL-IDS.md).
 
-## 9. Push harness to Azure DevOps
+## 9. Repository architecture diagrams
+
+Optional. GitHub Copilot in VS Code uses [Archify](https://github.com/tt-a1i/archify) through the harness skill `repo-architecture` (`.github/skills/repo-architecture/SKILL.md`). The harness does not vendor Archify. Install it on the machine where Copilot will draw the diagrams, after you confirm that scope.
+
+The list step must show exactly one skill named `archify`. If the destination already contains unmanaged files, stop and leave them in place.
+
+```bash
+npx -y skills@latest add https://archify.si --list --full-depth
+npx -y skills@latest add https://archify.si --skill archify --agent github-copilot --global --copy --yes
+node <installed-archify>/bin/archify.mjs doctor
+```
+
+`<installed-archify>` is the directory the installer reports. Then ask Copilot to diagram a named sibling folder, or to add, change, or remove an integration link.
+
+On first use, Copilot copies [`templates/architecture/`](../templates/architecture/) into a new folder beside the harness. Generated HTML stays there, not in the harness package:
+
+```text
+<parent>/architecture/
+  README.md
+  integrations.yaml                 # editable list; empty links draw no diagram
+  repos/<Folder>/architecture.json
+  repos/<Folder>/architecture.html
+  integrations.architecture.json    # only after the first link
+  integrations.html
+```
+
+Edit `integrations.yaml` (or ask Copilot to edit it), then ask Copilot to update the integration diagram. Link ids stay stable, and repositories already on the diagram keep their positions.
+
+## 10. Push harness to Azure DevOps
 
 ```bash
 az repos create --name SDLC-Harness   # if needed

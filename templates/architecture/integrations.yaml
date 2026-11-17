@@ -1,0 +1,10 @@
+version: 1
+links: []
+# - id: web-to-api
+#   from: Fabrikam.Web          # sibling folder name
+#   to: Contoso.Api
+#   kind: http                  # http | grpc | event | package | database | other
+#   label: calls orders API
+#   contract: POST /api/orders  # optional
+#   notes: ""                   # optional
+#   evidence: ""                # optional path relative to `from`
