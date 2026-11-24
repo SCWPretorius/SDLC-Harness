@@ -8,6 +8,7 @@ CMD=""
 ORG=""
 PROJECT=""
 REPOSITORY=""
+REVIEWER=""
 ID=""
 STATUS="active"
 ALL=0
@@ -44,6 +45,7 @@ Options:
   --org <url-or-name>   Azure DevOps organization
   --project <name>      Project (list, and REST calls)
   --repository <name>   Repository (list)
+  --reviewer <id>       Reviewer email or id (list)
   -h, --help            Command help
 
 Examples:
@@ -60,11 +62,12 @@ usage_cmd() {
     list)
       cat <<'EOF'
 Usage:
-  pr-review.sh list [--status active] [--all]
+  pr-review.sh list [--status active] [--all | --reviewer <id>]
                     [--org <org>] [--project <name>] [--repository <name>]
 
 Lists pull requests in the detected repository. Default status is active.
 Default reviewer is you (`az ad signed-in-user show`, else `az account show`).
+The chosen reviewer is printed. --reviewer replaces that identity.
 --all drops the reviewer filter.
 EOF
       ;;
@@ -87,8 +90,8 @@ Fetches the source and target branches and prints `git diff --stat` plus
 `--name-status` for target...source. --full also prints the patch. A path
 limits the diff.
 
-Outside that repository, prints the iteration file list. The patch needs a
-local clone.
+Outside that repository, prints the full pull request file list (common
+commit through the latest iteration). The patch needs a local clone.
 EOF
       ;;
     threads)
@@ -107,7 +110,8 @@ Usage:
                        [--org <org>] [--project <name>]
 
 Posts a pull request comment. --file and --line together attach it to that
-line on the PR side (right file). They must be passed as a pair.
+line on the PR side (right file) at the latest iteration. They must be
+passed as a pair.
 EOF
       ;;
     vote)
@@ -145,6 +149,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --repository)
       REPOSITORY="${2:-}"
+      shift 2
+      ;;
+    --reviewer)
+      REVIEWER="${2:-}"
       shift 2
       ;;
     --id)
@@ -232,6 +240,13 @@ fi
 if [[ "$CMD" != "list" && "$ALL" -eq 1 ]]; then
   reject_flag "--all" "list"
 fi
+if [[ "$CMD" != "list" && -n "$REVIEWER" ]]; then
+  reject_flag "--reviewer" "list"
+fi
+if [[ "$ALL" -eq 1 && -n "$REVIEWER" ]]; then
+  echo "ERROR: --all and --reviewer cannot be used together." >&2
+  exit 1
+fi
 if [[ "$CMD" != "diff" && "$FULL" -eq 1 ]]; then
   reject_flag "--full" "diff"
 fi
@@ -291,6 +306,7 @@ py() {
   PR_TEXT="$TEXT" \
   PR_FILE="$FILE" \
   PR_LINE="$LINE" \
+  PR_ITERATION="${PR_ITERATION:-}" \
   python3 - "$@" <<'PY'
 import json
 import os
@@ -400,6 +416,20 @@ def azure_parts(url):
     )
     if match:
         return tuple(urllib.parse.unquote(part) for part in match.groups())
+    match = re.search(
+        r"vs-ssh\.visualstudio\.com[:/]v3/([^/]+)/([^/]+)/([^/]+)$",
+        text,
+        re.I,
+    )
+    if match:
+        return tuple(urllib.parse.unquote(part) for part in match.groups())
+    match = re.search(
+        r"https://(?:[^@/]+@)?([^./]+)\.visualstudio\.com/(?:DefaultCollection/)?([^/]+)/_git/([^/?#]+)",
+        text,
+        re.I,
+    )
+    if match:
+        return tuple(urllib.parse.unquote(part) for part in match.groups())
     return None
 
 
@@ -491,7 +521,11 @@ def path_matches(path, filters):
         wanted = item.lstrip("/")
         if not wanted:
             continue
-        if normalized == wanted or normalized.endswith("/" + wanted):
+        if (
+            normalized == wanted
+            or normalized.endswith("/" + wanted)
+            or normalized.startswith(wanted + "/")
+        ):
             return True
     return False
 
@@ -585,7 +619,7 @@ elif op == "threads-url":
 elif op == "iterations-url":
     print(api_url(load(args[0]), "iterations?api-version=7.1"))
 elif op == "changes-url":
-    print(api_url(load(args[0]), "iterations/%s/changes?$top=2000&api-version=7.1" % args[1]))
+    print(api_url(load(args[0]), "iterations/%s/changes?$compareTo=0&$top=2000&api-version=7.1" % args[1]))
 elif op == "iteration-id":
     best = None
     for item in as_list(load(args[0]), "value"):
@@ -670,10 +704,20 @@ elif op == "comment-body":
         if not path.startswith("/"):
             path = "/" + path
         line_no = int(line_text)
+        iteration_text = os.environ.get("PR_ITERATION", "")
+        if not iteration_text:
+            die("line comment needs a pull request iteration.")
+        iteration_id = int(iteration_text)
         body["threadContext"] = {
             "filePath": path,
             "rightFileStart": {"line": line_no, "offset": 1},
             "rightFileEnd": {"line": line_no, "offset": 1},
+        }
+        body["pullRequestThreadContext"] = {
+            "iterationContext": {
+                "firstComparingIteration": iteration_id,
+                "secondComparingIteration": iteration_id,
+            }
         }
     print(json.dumps(body))
 else:
@@ -718,7 +762,12 @@ cmd_list() {
     cmd+=(--repository "$REPOSITORY")
   fi
   if [[ "$ALL" -eq 0 ]]; then
-    me=$(signed_in_user)
+    if [[ -n "$REVIEWER" ]]; then
+      me="$REVIEWER"
+    else
+      me=$(signed_in_user)
+    fi
+    echo "Reviewer: $me"
     cmd+=(--reviewer "$me")
   fi
   "${cmd[@]}" -o json > "$TMP/list.json"
@@ -802,9 +851,7 @@ repo_matches() {
 
 diff_file_list() {
   local url iter
-  url=$(py iterations-url "$TMP/pr.json")
-  az_rest GET "$url" > "$TMP/iterations.json"
-  iter=$(py iteration-id "$TMP/iterations.json")
+  iter=$(latest_iteration)
   if [[ -z "$iter" ]]; then
     echo "No file changes."
     return
@@ -818,9 +865,17 @@ diff_file_list() {
   fi
 }
 
+latest_iteration() {
+  local url iter
+  url=$(py iterations-url "$TMP/pr.json")
+  az_rest GET "$url" > "$TMP/iterations.json"
+  iter=$(py iteration-id "$TMP/iterations.json")
+  printf '%s\n' "$iter"
+}
+
 cmd_diff() {
   local refs source_ref target_ref source_branch target_branch
-  local dest_src dest_tgt
+  local dest_src dest_tgt diff_rc
   load_pr
   load_defaults
   refs=$(py diff-refs "$TMP/pr.json")
@@ -834,9 +889,16 @@ cmd_diff() {
     dest_tgt="refs/pr-review/${ID}/target"
     # Script-owned refs only. Force-update so a later review can move them.
     if git fetch origin "+${source_ref}:${dest_src}" "+${target_ref}:${dest_tgt}"; then
+      set +e
       emit_git_diff "$dest_tgt" "$dest_src"
-      return
+      diff_rc=$?
+      set -e
+      git update-ref -d "$dest_src" >/dev/null 2>&1 || true
+      git update-ref -d "$dest_tgt" >/dev/null 2>&1 || true
+      return "$diff_rc"
     fi
+    git update-ref -d "$dest_src" >/dev/null 2>&1 || true
+    git update-ref -d "$dest_tgt" >/dev/null 2>&1 || true
     echo "WARN: git fetch failed." >&2
   else
     echo "Current repository does not match this pull request." >&2
@@ -873,6 +935,14 @@ cmd_comment() {
   fi
   load_pr
   load_defaults
+  PR_ITERATION=""
+  if [[ -n "$FILE" ]]; then
+    PR_ITERATION=$(latest_iteration)
+    if [[ -z "$PR_ITERATION" ]]; then
+      echo "ERROR: pull request has no iteration to anchor the line comment." >&2
+      exit 1
+    fi
+  fi
   py comment-body > "$TMP/comment.json"
   url=$(py threads-url "$TMP/pr.json")
   az_rest POST "$url" "$TMP/comment.json" > "$TMP/comment-result.json"
