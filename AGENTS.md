@@ -32,7 +32,7 @@ Economy: Tab to `sdlc-orchestrator-economy` and only Task `*-economy` specialist
 
 ## Hard rules (same as Copilot)
 
-Full text: `.github/copilot-instructions.md`. Path-scoped extras: `.github/instructions/`. Skills: load via the skill tool (`caveman`, `codegraph-usage`, `ado-work-items`, …).
+Full text: `.github/copilot-instructions.md`. Path-scoped extras: `.github/instructions/`. Skills: load via the skill tool (`caveman`, `codegraph-usage`, `ado-work-items`, `repo-architecture`, …).
 
 1. Chat = **caveman full** every turn. Normal English only for persisted artifacts (analysis reports, ADO text, commits, PRs). Off only if user says `stop caveman` / `normal mode`.
 2. Prefer **CodeGraph** before blind grep/search (`codegraph install --target=opencode`).

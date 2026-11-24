@@ -163,7 +163,7 @@ Details: [docs/ECONOMY.md](docs/ECONOMY.md).
   opencode.json     # default agent, instructions, skills (when CWD is the harness)
   agents/           # generated OpenCode *.md (do not hand-edit)
 AGENTS.md           # OpenCode always-on rules
-docs/               # SETUP, WORKFLOW, ADO-STATES, BRANCHING
+docs/               # SETUP, WORKFLOW, ADO-STATES, BRANCHING, PR-REVIEW
 scripts/            # install + az helpers
 templates/          # PRD, analysis, review, workspace
 ```
