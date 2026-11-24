@@ -97,6 +97,14 @@ az extension add --name azure-devops --upgrade
 az devops configure --defaults organization=https://dev.azure.com/<ORG> project=<PROJECT>
 ```
 
+Review pull requests from the product repo (the current directory must be that repo):
+
+```bash
+/path/to/harness/scripts/ado/pr-review.sh list
+```
+
+Commands, comments, and votes: [PR-REVIEW.md](PR-REVIEW.md).
+
 ## 3. CodeGraph
 
 **Preferred:** answer yes to the installer’s CodeGraph prompt, or pass `--codegraph` in non-interactive mode. That will:
