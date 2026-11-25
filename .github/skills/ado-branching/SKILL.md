@@ -55,12 +55,14 @@ Use `./scripts/ado/link-branch.sh` after push when possible.
 Azure Repos example:
 
 ```bash
-az repos pr create \
-  --source-branch feature/<feature-slug>/<work-item-id>-short-name \
-  --target-branch feature/<feature-slug> \
+./scripts/ado/create-pr.sh \
+  --source feature/<feature-slug>/<work-item-id>-short-name \
+  --target feature/<feature-slug> \
   --title "..." \
-  --description "AB#<work-item-id>\n\n..."
+  --description "AB#<work-item-id>"
 ```
+
+Do not run raw `az repos pr create`. It prints the full pull request object.
 
 ## Link development
 

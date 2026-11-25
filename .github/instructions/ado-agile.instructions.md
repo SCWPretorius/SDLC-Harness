@@ -12,7 +12,7 @@ Before creating any Feature, User Story, or Task: ask which Epic to use (existin
 
 ## Mandatory backlog (full mode)
 
-If no work items exist for the current request, **create** them (Epic if needed → Feature → User Story → Task) via `ado-planner` / `az` before branching or coding. Do not proceed without real work item IDs.
+If no work items exist for the current request, **create** them (Epic if needed → Feature → User Story → Task) via `ado-planner` and `scripts/ado/create-hierarchy.sh` before branching or coding. Do not proceed without real work item IDs.
 
 Direct mode (`direct`, `skip analysis`, `no tickets`, `no ADO`, or naming one specialist) skips this. Epic selection above still applies whenever Features, User Stories, or Tasks are created.
 
@@ -21,4 +21,4 @@ Direct mode (`direct`, `skip analysis`, `no tickets`, `no ADO`, or naming one sp
 - Feature / User Story: New → Active → Resolved → Closed
 - Task / Bug: New → Active → Closed (Bugs may use Resolved when the process requires it — prefer project defaults if they differ)
 
-Use `az boards` via skill `ado-work-items` and `docs/ADO-STATES.md`. Update states as agent work progresses (`ado-ops` agent).
+Use `scripts/ado/` via skill `ado-work-items` and `docs/ADO-STATES.md`. Never run raw `az boards` or `az repos` (they print full JSON). Update states with `scripts/ado/update-state.sh` (`ado-ops` agent).

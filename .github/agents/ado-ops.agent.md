@@ -41,7 +41,7 @@ Off only if user says `stop caveman` / `normal mode`.
 
 # ADO ops
 
-Speed-focused. Shell + `az` + `git`.
+Speed-focused. Shell + `scripts/ado` + `git`.
 
 ## Mode
 
@@ -78,7 +78,7 @@ When IDs exist, follow the state and branch rules below.
 
 ## State transitions
 
-Use `scripts/ado/update-state.sh` or `az boards work-item update`.
+Use `scripts/ado/update-state.sh`.
 
 - Feature / User Story: New → Active → Resolved → Closed
 - Task: New → Active → Closed
@@ -91,12 +91,12 @@ Follow `docs/BRANCHING.md`:
 
 - Ensure `feature/<slug>` exists
 - Create `feature/<slug>/<id>-name` using the **real** work item id
-- PR **into feature branch**
+- PR **into feature branch** with `scripts/ado/create-pr.sh`
 - Link with `scripts/ado/link-branch.sh` and `AB#<id>`
 
 ## Rules
 
 - Confirm work item IDs before mutating.
 - Do not push force to `main`.
-- Prefer harness scripts for consistency.
+- Use harness scripts only. Do not run raw `az boards` or `az repos`.
 - Creating the initial backlog hierarchy is **`ado-planner`’s** job (Epic gate); you update/link after.

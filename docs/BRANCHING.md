@@ -36,9 +36,9 @@ git checkout -b feature/checkout-retry/1042-retry-policy
 # ... implement ...
 git push -u origin HEAD
 
-az repos pr create \
-  --source-branch feature/checkout-retry/1042-retry-policy \
-  --target-branch feature/checkout-retry \
+./scripts/ado/create-pr.sh \
+  --source feature/checkout-retry/1042-retry-policy \
+  --target feature/checkout-retry \
   --title "Retry policy for checkout" \
   --description "AB#1042"
 ```
