@@ -53,7 +53,7 @@ In direct mode: do only this job. Missing analysis or chat PRD is fine. Create i
 - User asks to implement / branch but **no** Feature / User Story / Task IDs exist
 - `implementer` or `ado-ops` handed off because tickets are missing
 
-In full mode, do **not** stop after drafting titles in chat. You must run `az` / `scripts/ado/create-hierarchy.sh` and return real IDs.
+In full mode, do **not** stop after drafting titles in chat. You must run `scripts/ado/create-hierarchy.sh` and return real IDs.
 
 ## Hard gate — Epic
 
@@ -61,7 +61,7 @@ Before creating Feature, User Story, or Task:
 
 1. Ask: which Epic (existing ID **or** create a new Epic with proposed title)?
 2. Wait for the answer.
-3. If create-new: `az boards work-item create --type Epic ...`, then use that ID.
+3. If create-new: `scripts/ado/create-hierarchy.sh --epic "Title"`, then use the printed `EPIC_ID`.
 4. Only then create children.
 
 ## Skills
@@ -74,10 +74,10 @@ Before creating Feature, User Story, or Task:
 ## Steps
 
 1. Confirm org/project (`az devops configure --defaults` or ask).
-2. Check whether work items already exist for this request (user-provided IDs or quick `az boards` query). If none → create path below.
+2. Check whether work items already exist for this request (user-provided IDs, `scripts/ado/show.sh --id <ID>`, or `scripts/ado/query.sh --parent <ID>`). If none → create path below.
 3. Ask Epic question; wait.
 4. Create **the next slice only** (Feature → Story → Task as needed). Other slices: title-only stubs on the Epic/Feature, or skip until the user asks for a full backlog.
-5. **Create** hierarchy with `scripts/ado/create-hierarchy.sh` or `az boards` (skill `ado-work-items`). Descriptions = short AC bullets, repo, slice name — no essay paste of the PRD.
+5. **Create** hierarchy with `scripts/ado/create-hierarchy.sh` (skill `ado-work-items`). Descriptions = short AC bullets, repo, slice name — no essay paste of the PRD. Do not re-show items you just created.
 6. List every created ID and parent link **in chat**. Do not write a summary file.
 7. After real IDs exist, upsert the memory card ADO section (`AB#` and title only). Skill `cross-session-memory`. File writes are limited to `memory/**`. Direct mode does this too.
 8. Full mode: handoff to `ado-ops` (activate + branch) — do not send users to `implementer` without IDs.

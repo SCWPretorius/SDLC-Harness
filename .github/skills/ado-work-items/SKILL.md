@@ -11,6 +11,12 @@ description: >
 
 ADO is the source of truth. List created IDs **in chat**. Never write a backlog summary under `docs/prd/`, `docs/analysis/`, or `docs/reviews/`. After `az` returns real IDs, upsert the memory card ADO section (`AB#` and title only). Skill `cross-session-memory`. Status `backlog`.
 
+## Output rule
+
+Run only `scripts/ado/*.sh`. They print short lines (`EPIC_ID=`, `id= type= state= title=`, `PR_ID=`).
+Do not run `az boards` or `az repos` with `-o json`, `-o table`, `work-item show`, or `boards query`.
+Do not re-show an item you just created. Setup (`az login`, `az devops configure`) is the only raw `az` allowed.
+
 ## Defaults
 
 ```bash
@@ -27,7 +33,7 @@ Before creating Feature, User Story, or Task:
 
 1. Ask: "Which Epic should these items live under? Provide Epic ID, or say create a new Epic."
 2. Wait for answer.
-3. If create-new: create the Epic with `az boards work-item create --type Epic ...` first.
+3. If create-new: `./scripts/ado/create-hierarchy.sh --epic "Title" [--epic-desc "text"]`.
 4. Only then create children.
 
 ## Mandatory create when missing (full mode)
@@ -36,7 +42,7 @@ If the user wants to build / branch / track work and **no** Feature / User Story
 
 - Creating the **next slice** is **required** (full backlog only if the user asks)
 - Do not stop at proposing titles in chat
-- Run `az` or `./scripts/ado/create-hierarchy.sh` and return real IDs **in chat**
+- Run `./scripts/ado/create-hierarchy.sh` and return real IDs **in chat**
 - `implementer` / `ado-ops` must wait for those IDs
 
 Direct mode (`direct`, `skip analysis`, `no tickets`, `no ADO`, or naming one specialist) does not require this create step. The Epic gate above still applies when items are created.
@@ -51,41 +57,14 @@ Review bugs: `code-reviewer` creates `Bug` (or Task) under the relevant Feature 
 
 ## Create helpers
 
-Prefer repo scripts:
-
 ```bash
+./scripts/ado/create-hierarchy.sh --epic "Title" --epic-desc "text"
 ./scripts/ado/create-hierarchy.sh --epic-id <ID> --feature "Title" --story "Title" --task "Title"
+./scripts/ado/create-hierarchy.sh --parent-id <ID> --bug "Title" --bug-desc "text"
 ./scripts/ado/update-state.sh --id <ID> --state Active
 ```
 
-### Manual `az` examples
-
-```bash
-# Epic
-az boards work-item create --type Epic --title "..." --description "..."
-
-# Feature under Epic (parent link)
-az boards work-item create --type Feature --title "..." --description "..." \
-  --relation "parent=<EPIC_ID>"
-
-# User Story under Feature
-az boards work-item create --type "User Story" --title "..." --description "..." \
-  --relation "parent=<FEATURE_ID>"
-
-# Task under User Story
-az boards work-item create --type Task --title "..." --description "..." \
-  --relation "parent=<STORY_ID>"
-
-# Bug under parent
-az boards work-item create --type Bug --title "..." --description "..." \
-  --relation "parent=<PARENT_ID>"
-```
-
-If `--relation parent=` fails on the installed CLI version, create the item then:
-
-```bash
-az boards work-item relation add --id <CHILD_ID> --relation-type parent --target-id <PARENT_ID>
-```
+Descriptions are arguments to the script. The script does not print them back. Parent links are applied inside `create-hierarchy.sh`.
 
 ## Titles and descriptions
 
@@ -102,6 +81,7 @@ az boards work-item relation add --id <CHILD_ID> --relation-type parent --target
 ## Query
 
 ```bash
-az boards work-item show --id <ID> -o json
-az boards query --wiql "SELECT [System.Id],[System.Title],[System.State] FROM WorkItems WHERE [System.Parent] = <ID>"
+./scripts/ado/show.sh --id <ID>
+./scripts/ado/query.sh --parent <ID>
+./scripts/ado/query.sh --parent <ID> --title "slice name"
 ```
