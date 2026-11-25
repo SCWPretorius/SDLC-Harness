@@ -9,3 +9,5 @@ node_modules/
 package-lock.json
 docs/prd/
 docs/reviews/
+memory/INDEX.md
+memory/cards/

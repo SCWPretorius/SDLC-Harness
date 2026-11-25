@@ -20,6 +20,7 @@ Product repos sit as siblings; harness is another sibling. Open via multi-root `
 5. Identify cross-repo dependencies (HTTP/gRPC, shared packages, events, IaC).
 6. Write one concise report using `templates/analysis-report.md`.
 7. Save under `docs/analysis/<yyyy-mm-dd>-<slug>.md` in the harness (or agreed docs path).
+8. Upsert `memory/cards/<same-stem>.md` (Plan section only) and one `memory/INDEX.md` line. Skill `cross-session-memory`. Do not copy the report.
 
 ## Report rules
 
@@ -31,6 +32,6 @@ Product repos sit as siblings; harness is another sibling. Open via multi-root `
 
 ## Handoff
 
-Full mode: when analysis is complete, offer `tech-pm` to draft a **chat PRD** (no file).
+Full mode: when analysis is complete, offer `tech-pm` to draft a **chat PRD** (no `docs/prd/`).
 
 Direct mode: stop after the report. Name other specialists and wait.

@@ -3,12 +3,13 @@ name: ado-work-items
 description: >
   Create and update Azure DevOps Agile work items with az CLI: Epic, Feature,
   User Story, Task, Bug. Always ask which Epic before creating Features/Stories/Tasks.
-  Create the next slice only; return IDs in chat; never write a summary file.
+  Create the next slice only; return IDs in chat; never write a backlog summary.
+  After real IDs exist, upsert the memory card (AB# and title only).
 ---
 
 # Azure DevOps work items (`az`)
 
-ADO is the source of truth. List created IDs **in chat**. Never write a backlog summary under `docs/prd/`, `docs/analysis/`, or anywhere else in the repo.
+ADO is the source of truth. List created IDs **in chat**. Never write a backlog summary under `docs/prd/`, `docs/analysis/`, or `docs/reviews/`. After `az` returns real IDs, upsert the memory card ADO section (`AB#` and title only). Skill `cross-session-memory`. Status `backlog`.
 
 ## Output rule
 

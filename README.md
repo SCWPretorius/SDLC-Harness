@@ -109,7 +109,7 @@ Two profiles ship side by side. Copilot model fields use **slug IDs** (see [docs
 |-------|------|-----------------|
 | `sdlc-orchestrator` | Route phases, enforce process | `gpt-6.1-terra` |
 | `analyst` | Multi-repo analysis + docs | `gpt-6.1-sol` |
-| `tech-pm` | Findings → short chat PRD (no file) | `claude-opus-5.5` |
+| `tech-pm` | Findings → short chat PRD (no `docs/prd/`) | `claude-opus-5.5` |
 | `ado-planner` | Chat PRD → next-slice Feature / Story / Task (asks for Epic first) | `claude-sonnet-5.5` |
 | `ado-ops` | State moves, branch / PR linking | `gpt-6-luna` |
 | `implementer` | Vertical-slice .NET 10 implementation | `gpt-6-astra` |
@@ -125,7 +125,7 @@ Same SDLC rules as standard — Epic gate, create backlog when missing, branchin
 |-------|------|-----------------|
 | `sdlc-orchestrator-economy` | Route phases | `gpt-6-luna` |
 | `analyst-economy` | Multi-repo analysis + docs | `gpt-6.1-terra` |
-| `tech-pm-economy` | Findings → short chat PRD (no file) | `claude-sonnet-5.5` |
+| `tech-pm-economy` | Findings → short chat PRD (no `docs/prd/`) | `claude-sonnet-5.5` |
 | `ado-planner-economy` | Chat PRD → next-slice Feature / Story / Task | `gpt-6.1-terra` |
 | `ado-ops-economy` | States / branches / PR links | `gpt-6-luna` |
 | `implementer-economy` | Vertical-slice implementation | `gpt-6.1-sol` |
@@ -164,8 +164,9 @@ Details: [docs/ECONOMY.md](docs/ECONOMY.md).
   agents/           # generated OpenCode *.md (do not hand-edit)
 AGENTS.md           # OpenCode always-on rules
 docs/               # SETUP, WORKFLOW, ADO-STATES, BRANCHING, PR-REVIEW
+memory/             # README committed; INDEX.md and cards/ are local gitignored
 scripts/            # install + az helpers
-templates/          # PRD, analysis, review, workspace
+templates/          # PRD, analysis, memory card, review, workspace
 ```
 
 After editing Copilot agents, regenerate OpenCode files:
@@ -176,7 +177,7 @@ node bin/sync-opencode-agents.mjs
 
 ## Hard rules (all agents)
 
-1. Chat uses **caveman full** always (forced via always-on instructions + skill + every agent). Do not wait for `/caveman`. Persisted artifacts (analysis reports, ADO text, commits, PRs) use normal English. Do not write PRD or review markdown into the repo.
+1. Chat uses **caveman full** always (forced via always-on instructions + skill + every agent). Do not wait for `/caveman`. Persisted artifacts (analysis reports, memory cards, ADO text, commits, PRs) use normal English. Do not write PRD or review markdown under `docs/prd/` or `docs/reviews/`. A short `memory/cards/` entry is allowed. See [memory/README.md](memory/README.md).
 2. Prefer **CodeGraph** before blind grep/search.
 3. Never create Features / User Stories / Tasks without a confirmed **Epic**. In full mode, if no work items exist, **create the next slice** before branch/code. AC lives on the tickets; IDs in chat. Direct mode (say `direct` or name one agent) skips analysis and ticket creation.
 4. Branching in full mode: `main` → `feature/<slug>` → `feature/<slug>/<id>-name` → PR → feature branch. Direct mode with no ID: current branch, or `feature/<slug>` when the user asks for a branch.

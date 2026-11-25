@@ -26,15 +26,28 @@ This is not optional. Do not wait for the user to say `/caveman`. Load skill `ca
 Write **normal English** (not caveman) for persisted artifacts only:
 
 - Analysis reports (`docs/analysis/`)
+- Memory cards (`memory/cards/`) and `memory/INDEX.md`
 - Azure DevOps work-item titles and descriptions
 - Commit messages, PR titles/bodies
 - User-facing harness docs (SETUP, WORKFLOW, and similar)
 
-Do **not** write PRDs, backlog summaries, or review-findings markdown into the repo. Chat PRDs and review findings go to ADO (or stay in chat until ADO exists).
+Do **not** write PRDs, backlog summaries, or review-findings markdown under `docs/prd/` or `docs/reviews/`. Chat PRDs and review findings go to ADO (or stay in chat until ADO exists). The memory card is the only extra markdown: a short plan, a confirmed-PRD summary, and ADO ids. Skill: `cross-session-memory`.
 
 After finishing an artifact, resume caveman for chat.
 
 Auto-clarity: drop caveman for security warnings, irreversible confirms, or multi-step sequences where fragments would mislead — then resume.
+
+## Cross-session memory
+
+Do not open memory on every turn. Do not read `.copilot` session stores or transcripts.
+
+When the request names another repo, a prior feature, or asks what was planned:
+
+1. Read `memory/INDEX.md` (one line per feature).
+2. Open the one matching card under `memory/cards/`.
+3. Open the linked analysis file only when the card lacks a needed fact.
+
+Writes happen once, at the end of analysis, after the user confirms the chat PRD, or after `az` returns real ADO ids. Skill: `cross-session-memory`.
 
 ## Code intelligence
 
@@ -47,7 +60,7 @@ Auto-clarity: drop caveman for security warnings, irreversible confirms, or mult
 Full mode (default) requires real work items before branch or code. Direct mode (`direct`, `skip analysis`, `no tickets`, `no ADO`, or naming one specialist) does that agent's job without creating analysis docs or tickets.
 
 - **Full mode:** if no work items exist for the request, agents MUST create them before branching or coding. Do not invent fake ticket IDs or proceed without ADO items.
-- Creation path: `ado-planner` (ask Epic → create Epic if needed → **next slice** Feature → User Story → Task) using `az` / `scripts/ado/*`. Follow skill `ado-work-items`. Put AC on work-item descriptions. Return IDs in chat — no summary file.
+- Creation path: `ado-planner` (ask Epic → create Epic if needed → **next slice** Feature → User Story → Task) using `az` / `scripts/ado/*`. Follow skill `ado-work-items`. Put AC on work-item descriptions. Return IDs in chat — no summary file. Then upsert the memory card ADO section (`AB#` and title only).
 - Never create Feature, User Story, or Task until the user confirms which **Epic** to use (existing ID or create-new). This Epic gate applies whenever items are created, including direct mode.
 - Use `az` CLI (or `scripts/ado/*`) for all board mutations. Do not invent REST calls when `az` works.
 - Follow states in `docs/ADO-STATES.md` and skills `ado-work-items` / `ado-ops` agent guidance.
@@ -68,7 +81,7 @@ Full mode (default) requires real work items before branch or code. Direct mode 
 **Full mode** is the default. Required chain for new work:
 
 1. `analyst` → analysis docs
-2. `tech-pm` → chat PRD (user confirms; no file)
+2. `tech-pm` → chat PRD (user confirms; no `docs/prd/`; then memory card)
 3. `ado-planner` → next-slice work items (Epic gate; IDs in chat)
 4. `ado-ops` → states / branches / PR links
 5. `implementer` → code
